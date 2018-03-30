@@ -321,7 +321,7 @@ void MainWindow::on_pbLoadData_clicked()
       }
 
       QFile fileRef(fileName+".ref");
-        if(fileRef.open(QIODevice::WriteOnly))
+        if(fileRef.open(QIODevice::ReadOnly))
         {
             QTextStream out(&fileRef);
             for(int i=0;i<referencePoints.size();i++)
