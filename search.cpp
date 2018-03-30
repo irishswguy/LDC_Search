@@ -32,7 +32,7 @@ void Search::process() {
         SearchStatus.K[1].push_back(qCos((double)i/20.0));
         SearchStatus.K[2].push_back(qCos((double)i/57.8));
         SearchStatus.Angle.push_back(qSin((double)i/57.8));
-        SearchStatus.Centre.push_back(QPoint(10,10));
+        SearchStatus.Centre= QPoint(500+i,500+i);
         SearchStatus.qsStatus = "Search Number:" + QString::number(i);
         emit updateStatus();
         QThread::msleep(100);

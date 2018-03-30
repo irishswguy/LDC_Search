@@ -13,7 +13,7 @@ struct SEARCH_STATUS
     QVector <double> error;
     QVector <double> K[3];
     QVector <double> Angle;
-    QVector <QPoint> Centre;
+    QPoint  Centre;
     bool Finished=false;
     QString qsStatus;
 };

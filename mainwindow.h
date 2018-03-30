@@ -42,7 +42,7 @@ private:
     QChartView *chartView;
     QChartView *chartViewConstants;
     QVector <QPoint> referencePoints;
-    QVector <QPoint> undistortedPoints;
+    QVector <QPoint> distortedPoints;
     QPixmap Image;
 };
 

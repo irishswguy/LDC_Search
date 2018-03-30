@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->pbCancleSearch->setEnabled(false);
     ui->pbExit->setEnabled(true);
 
+    Image= QPixmap(1920,1080);
 
 }
 
@@ -177,11 +178,16 @@ void MainWindow::ShowImage()
     paint->setRenderHint(QPainter::Antialiasing);
     paint->setRenderHint(QPainter::HighQualityAntialiasing);
 
-    Points = undistortedPoints;
+    Points = distortedPoints;
     if(Points.size()==0)
         return;
 
+    paint->setPen(Qt::green);
+    paint->setBrush(Qt::green);
+    paint->drawEllipse(search->SearchStatus.Centre,10,10);
+
     paint->setPen(Qt::blue);
+     paint->setBrush(Qt::blue);
     paint->fillPath(path_reference, Qt::blue);
 
     for(int i=0;i<Points.size();i++)
@@ -214,6 +220,7 @@ void MainWindow::ShowImage()
     Points = referencePoints;
     path_reference = QPainterPath();
     paint->setPen(Qt::red);
+    paint->setBrush(Qt::red);
     paint->fillPath(path_reference, Qt::red);
     for(int i=0;i<Points.size();i++)
         {
@@ -241,6 +248,8 @@ void MainWindow::ShowImage()
             QPoint P2 = Points.at(Index2);
             paint->drawLine(P1,P2);
         }
+
+
 
     delete paint;
     ui->lbImage->setPixmap(Image);
@@ -307,30 +316,46 @@ void MainWindow::on_pbLoadData_clicked()
     QString fileName = QFileDialog::getOpenFileName(this,
              tr("Save Points File"), "/home/louis/Projects/temp", tr("TXT Files (*.*)"));
 
+    fileName.chop(4);
     if(fileName!=NULL)
     {
-    QFile file(fileName+".dis");
-      if(file.open(QIODevice::ReadOnly))
+    QFile fileRef(fileName+".ref");
+    if(fileRef.open(QIODevice::ReadOnly))
       {
-          QTextStream out(&file);
-          for(int i=0;i<undistortedPoints.size();i++)
-          {
-          out <<  QString::number(undistortedPoints.at(i).x()) <<"," << QString::number(undistortedPoints.at(i).y()) << "\r\n";
-          }
-          file.close();
+          QTextStream in(&fileRef);
+             while (!in.atEnd())
+             {
+                QString line = in.readLine();
+                qDebug() << line;
+                QStringList tmpList = line.split(QRegExp(","));
+                QString sX = tmpList[0];
+                QString sY = tmpList[1];
+                QPoint P(sX.toInt(),sY.toInt());
+                referencePoints.push_back(P);
+             }
+          fileRef.close();
       }
+    else
+        qDebug() << "Unable to read file:" << fileName;
 
-      QFile fileRef(fileName+".ref");
-        if(fileRef.open(QIODevice::ReadOnly))
+    QFile fileDis(fileName+".dis");
+        if(fileDis.open(QIODevice::ReadOnly))
         {
-            QTextStream out(&fileRef);
-            for(int i=0;i<referencePoints.size();i++)
-            {
-            out <<  QString::number(referencePoints.at(i).x()) <<"," << QString::number(referencePoints.at(i).y()) << "\r\n";
-            }
-            fileRef.close();
+            QTextStream in(&fileDis);
+               while (!in.atEnd())
+               {
+                  QString line = in.readLine();
+                  qDebug() << line;
+                  QStringList tmpList = line.split(QRegExp(","));
+                  QString sX = tmpList[0];
+                  QString sY = tmpList[1];
+                  QPoint P(sX.toInt(),sY.toInt());
+                  distortedPoints.push_back(P);
+               }
+            fileDis.close();
         }
-
+      else
+          qDebug() << "Unable to read file:" << fileName;
         ui->pbLoadData->setEnabled(true);
         ui->pbStartSearch->setEnabled(true);
         ui->pbCancleSearch->setEnabled(false);
