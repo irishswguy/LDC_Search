@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QThread>
 #include <QPoint>
+#include <QtMath>
 
 struct SEARCH_STATUS
 {
@@ -14,6 +15,7 @@ struct SEARCH_STATUS
     QVector <double> Angle;
     QVector <QPoint> Centre;
     bool Finished=false;
+    QString qsStatus;
 };
 
 class Search : public QObject

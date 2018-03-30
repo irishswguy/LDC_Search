@@ -11,7 +11,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     search->moveToThread(thread);
-    connect(search, SIGNAL (error(QString)), this, SLOT (errorString(QString)));
     connect(search, SIGNAL (updateStatus()), this, SLOT (updateStatus()));
 
     connect(thread, SIGNAL (started()), search, SLOT (process()));
@@ -28,6 +27,16 @@ MainWindow::MainWindow(QWidget *parent) :
     QGridLayout* gridLayoutConstants;
     gridLayoutConstants = new QGridLayout(ui->constPlot);
     gridLayoutConstants->addWidget(chartViewConstants,0,0);
+
+    chartView->setFrameShape(QFrame::Box);
+    chartViewConstants->setFrameShape(QFrame::Box);
+    PlotConstants();
+    PlotError();
+
+    ui->pbLoadData->setEnabled(true);
+    ui->pbStartSearch->setEnabled(false);
+    ui->pbCancleSearch->setEnabled(false);
+    ui->pbExit->setEnabled(true);
 
 
 }
@@ -67,9 +76,7 @@ void MainWindow::PlotError()
         axisX->setMax(STEP);
     else
         axisX->setMax(NumberOfSamples+(STEP/4));
-
     axisX->setMin(0.0);
-
 
     QValueAxis *axisY = new QValueAxis();
     axisY->setTitleText("Error Value");
@@ -77,41 +84,44 @@ void MainWindow::PlotError()
     axisY->setTickCount(5);
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
-    axisY->setMax(2.0);
+    axisY->setMax(10.0);
     axisY->setMin(0.0);
-
 
     // We set the graph in the view
     chartView->setChart(chart);
-
 }
 
 void MainWindow::PlotConstants()
 {
-    int seed=1;
 
-    QLineSeries *series = new QLineSeries();
-    int k = 0;
-    while (k <= 200)
-    {
-        *series << QPointF(k,sin((seed+ k)*0.1));
-        ++k;
-    }
+    int NumberOfSamples=search->SearchStatus.error.size();
 
-    QLineSeries *series2 = new QLineSeries();
-    k = 0;
-    while (k <= 100)
-    {
-        *series2 << QPointF(k,sin((seed+ k)*0.1)+.21);
-        ++k;
-    }
+    QLineSeries *K0series = new QLineSeries();
+    QLineSeries *K1series = new QLineSeries();
+    QLineSeries *K2series = new QLineSeries();
+    QLineSeries *Angleseries = new QLineSeries();
+
+    K0series->setName(QString("K0"));
+    K1series->setName(QString("K1"));
+    K2series->setName(QString("K2"));
+    Angleseries->setName(QString("Angle"));
+
+    for(int i=0;i<NumberOfSamples;i++){
+        *K0series << QPointF(i,search->SearchStatus.K[0].at(i));
+        *K1series << QPointF(i,search->SearchStatus.K[1].at(i));
+        *K2series << QPointF(i,search->SearchStatus.K[2].at(i));
+        *Angleseries << QPointF(i,search->SearchStatus.Angle.at(i));
+        }
 
     QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->addSeries(series2);
+    chart->addSeries(K0series);
+    chart->addSeries(K1series);
+    chart->addSeries(K2series);
+    chart->addSeries(Angleseries);
+
 
     chart->legend()->hide();
-    chart->setTitle("Search Error");
+    chart->setTitle("Constants Chart");
 
     // Adjusting the Axes of the Graph
     QValueAxis *axisX = new QValueAxis();
@@ -119,44 +129,146 @@ void MainWindow::PlotConstants()
     axisX->setLabelFormat("%i");
     axisX->setTickCount(1);
     chart->addAxis(axisX, Qt::AlignBottom);
-    series->attachAxis(axisX);
+    K0series->attachAxis(axisX);
+    K1series->attachAxis(axisX);
+    K2series->attachAxis(axisX);
+    Angleseries->attachAxis(axisX);
+    if(NumberOfSamples<STEP)
+        axisX->setMax(STEP);
+    else
+        axisX->setMax(NumberOfSamples+(STEP/4));
+    axisX->setMin(0.0);
+
 
     QValueAxis *axisY = new QValueAxis();
-    axisY->setTitleText("Error Value");
+    axisY->setTitleText("Constants");
     axisY->setLabelFormat("%g");
     axisY->setTickCount(5);
     chart->addAxis(axisY, Qt::AlignLeft);
-    series->attachAxis(axisY);
+    K0series->attachAxis(axisY);
     axisY->setMax(2.0);
     axisY->setMin(-2.0);
 
 
-    QValueAxis *axisY2 = new QValueAxis();
-    axisY2->setTitleText("Error Value");
-    axisY2->setLabelFormat("%g");
-    axisY2->setTickCount(5);
-    chart->addAxis(axisY, Qt::AlignRight);
-    series2->attachAxis(axisY);
+    K1series->attachAxis(axisY);
+    K2series->attachAxis(axisY);
+    Angleseries->attachAxis(axisY);
 
-    // We set the graph in the view
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+
     chartViewConstants->setChart(chart);
 
 }
-
-void MainWindow::errorString(QString err)
+//-------------------------------------------------------------------------------------------------------------
+//
+//  This function displates images of the image points and saves these images to files.
+//
+//-------------------------------------------------------------------------------------------------------------
+void MainWindow::ShowImage()
 {
-    qDebug() << "Error String:"<< err;
+    Image.fill();
+
+    QVector <QPoint> Points;
+
+    QPainter *paint = new QPainter(&Image);
+    QPainterPath path_reference;
+
+    paint->setRenderHint(QPainter::Antialiasing);
+    paint->setRenderHint(QPainter::HighQualityAntialiasing);
+
+    Points = undistortedPoints;
+    if(Points.size()==0)
+        return;
+
+    paint->setPen(Qt::blue);
+    paint->fillPath(path_reference, Qt::blue);
+
+    for(int i=0;i<Points.size();i++)
+        {
+        QPointF fP(Points.at(i).x(),Points.at(i).y());
+        path_reference.addEllipse(fP,7,7);
+        }
+
+    paint->fillPath(path_reference, Qt::blue);
+    paint->drawPath(path_reference);
+
+    for(int y=0;y<19;y++)
+        for(int x=0;x<18;x++)
+        {
+            QPoint P1 = Points.at(y+(19*x));
+            QPoint P2 = Points.at(y+(19*x)+19);
+            paint->drawLine(P1,P2);
+        }
+
+    for(int x=0;x<19;x++)
+        for(int y=0;y<18;y++)
+        {
+            int Index1 = y+(19*x);
+            int Index2 = y+(19*x)+1;
+            QPoint P1 = Points.at(Index1);
+            QPoint P2 = Points.at(Index2);
+            paint->drawLine(P1,P2);
+        }
+
+    Points = referencePoints;
+    path_reference = QPainterPath();
+    paint->setPen(Qt::red);
+    paint->fillPath(path_reference, Qt::red);
+    for(int i=0;i<Points.size();i++)
+        {
+        QPointF fP(Points.at(i).x(),Points.at(i).y());
+        path_reference.addEllipse(fP,7,7);
+        }
+
+    paint->fillPath(path_reference, Qt::red);
+    paint->drawPath(path_reference);
+
+    for(int y=0;y<19;y++)
+        for(int x=0;x<18;x++)
+        {
+            QPoint P1 = Points.at(y+(19*x));
+            QPoint P2 = Points.at(y+(19*x)+19);
+            paint->drawLine(P1,P2);
+        }
+
+    for(int x=0;x<19;x++)
+        for(int y=0;y<18;y++)
+        {
+            int Index1 = y+(19*x);
+            int Index2 = y+(19*x)+1;
+            QPoint P1 = Points.at(Index1);
+            QPoint P2 = Points.at(Index2);
+            paint->drawLine(P1,P2);
+        }
+
+    delete paint;
+    ui->lbImage->setPixmap(Image);
+
+
 }
+
+void MainWindow::ShowSearchStatus()
+{
+    ui->lwSearchStatus->addItem(search->SearchStatus.qsStatus);
+    ui->lwSearchStatus->scrollToBottom();
+}
+
+
 
 void MainWindow::updateStatus()
 {
     qDebug() << "Status";
     PlotError();
+    PlotConstants();
+    ShowImage();
+    ShowSearchStatus();
 
     if(search->SearchStatus.Finished==true)
     {
         ui->pbStartSearch->setEnabled(true);
         ui->pbCancleSearch->setEnabled(false);
+        ui->pbExit->setEnabled(true);
     }
 }
 
@@ -166,14 +278,63 @@ void MainWindow::on_pbStartSearch_clicked()
      thread->start();
      PlotError();
      PlotConstants();
+
+     ui->pbLoadData->setEnabled(false);
      ui->pbStartSearch->setEnabled(false);
      ui->pbCancleSearch->setEnabled(true);
+     ui->pbExit->setEnabled(false);
+
 }
 
 void MainWindow::on_pbCancleSearch_clicked()
 {
     search->Cancel=true;
+    ui->pbLoadData->setEnabled(true);
     ui->pbStartSearch->setEnabled(true);
     ui->pbCancleSearch->setEnabled(false);
+    ui->pbExit->setEnabled(true);
+
+
+}
+
+void MainWindow::on_pbExit_clicked()
+{
+    QApplication::quit();
+}
+
+void MainWindow::on_pbLoadData_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+             tr("Save Points File"), "/home/louis/Projects/temp", tr("TXT Files (*.*)"));
+
+    if(fileName!=NULL)
+    {
+    QFile file(fileName+".dis");
+      if(file.open(QIODevice::WriteOnly))
+      {
+          QTextStream out(&file);
+          for(int i=0;i<undistortedPoints.size();i++)
+          {
+          out <<  QString::number(undistortedPoints.at(i).x()) <<"," << QString::number(undistortedPoints.at(i).y()) << "\r\n";
+          }
+          file.close();
+      }
+
+      QFile fileRef(fileName+".ref");
+        if(fileRef.open(QIODevice::WriteOnly))
+        {
+            QTextStream out(&fileRef);
+            for(int i=0;i<referencePoints.size();i++)
+            {
+            out <<  QString::number(referencePoints.at(i).x()) <<"," << QString::number(referencePoints.at(i).y()) << "\r\n";
+            }
+            fileRef.close();
+        }
+
+        ui->pbLoadData->setEnabled(true);
+        ui->pbStartSearch->setEnabled(true);
+        ui->pbCancleSearch->setEnabled(false);
+        ui->pbExit->setEnabled(true);
+    }
 
 }

@@ -5,7 +5,8 @@
 #include <QThread>
 #include <QDebug>
 #include <search.h>
-//#include <QChartView>
+#include <QImage>
+#include <QPixmap>
 #include <QtCharts>
 
 namespace Ui {
@@ -21,12 +22,18 @@ public:
     ~MainWindow();
     void PlotError(void);
     void PlotConstants(void);
+    void ShowImage();
+    void ShowSearchStatus();
+
 
 private slots:
-    void errorString(QString);
     void updateStatus(void);
     void on_pbStartSearch_clicked();
     void on_pbCancleSearch_clicked();
+
+    void on_pbExit_clicked();
+
+    void on_pbLoadData_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -34,7 +41,9 @@ private:
     Search * search = new Search();
     QChartView *chartView;
     QChartView *chartViewConstants;
-
+    QVector <QPoint> referencePoints;
+    QVector <QPoint> undistortedPoints;
+    QPixmap Image;
 };
 
 #endif // MAINWINDOW_H
