@@ -12,6 +12,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     search->moveToThread(thread);
     connect(search, SIGNAL (updateStatus()), this, SLOT (updateStatus()));
+    connect(search, SIGNAL (signalUpdateTextStatus(QString)), this, SLOT (slotUpdateTextStatus(QString)));
 
     connect(thread, SIGNAL (started()), search, SLOT (process()));
     connect(search, SIGNAL (finished()), thread, SLOT (quit()));
@@ -259,8 +260,10 @@ void MainWindow::ShowImage()
 
 void MainWindow::ShowSearchStatus()
 {
-    ui->lwSearchStatus->addItem(search->SearchStatus.qsStatus);
-    ui->lwSearchStatus->scrollToBottom();
+    if(search->SearchStatus.qsStatus!=""){
+        ui->lwSearchStatus->addItem(search->SearchStatus.qsStatus);
+        ui->lwSearchStatus->scrollToBottom();
+        }
 }
 
 
@@ -362,4 +365,10 @@ void MainWindow::on_pbLoadData_clicked()
         ui->pbExit->setEnabled(true);
     }
 
+}
+
+void MainWindow::slotUpdateTextStatus(QString message)
+{
+    ui->lwSearchStatus->addItem(message);
+    ui->lwSearchStatus->scrollToBottom();
 }

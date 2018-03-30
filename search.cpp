@@ -35,14 +35,24 @@ void Search::process() {
         SearchStatus.Centre= QPoint(500+i,500+i);
         SearchStatus.qsStatus = "Search Number:" + QString::number(i);
         emit updateStatus();
+        emit signalUpdateTextStatus("Test"+QString::number(i));
         QThread::msleep(100);
         if (Cancel == true) goto CANCEL;
         }
 
-    emit error("This is a signal");
+    SearchStatus.qsStatus ="";
+    emit signalUpdateTextStatus("Search is finished.....");
+
+    emit signalUpdateTextStatus(" ");
+    emit signalUpdateTextStatus("---------Best Results-------");
+    emit signalUpdateTextStatus("  K0       = 0.964");
+    emit signalUpdateTextStatus("  K2       = 0.964");
+    emit signalUpdateTextStatus("  K3       = 0.964");
+    emit signalUpdateTextStatus("  Angle    = 0.964");
+    emit signalUpdateTextStatus("  Centre   = (567,234)");
+    emit signalUpdateTextStatus(" ");
 
 
-    qDebug() << "Search Process Finished";
     SearchStatus.Finished=true;
     emit finished();
     return;

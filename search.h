@@ -34,12 +34,10 @@ public slots:
     void process();
 signals:
     void finished();
-    void error(QString err);
     void updateStatus(void);
+    void signalUpdateTextStatus(QString);
 private:
 
-
-signals:
 
 public slots:
 };

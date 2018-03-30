@@ -30,10 +30,9 @@ private slots:
     void updateStatus(void);
     void on_pbStartSearch_clicked();
     void on_pbCancleSearch_clicked();
-
     void on_pbExit_clicked();
-
     void on_pbLoadData_clicked();
+    void slotUpdateTextStatus(QString);
 
 private:
     Ui::MainWindow *ui;
