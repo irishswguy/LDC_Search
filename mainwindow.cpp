@@ -312,6 +312,7 @@ void MainWindow::on_pbCancleSearch_clicked()
 void MainWindow::on_pbExit_clicked()
 {
     QApplication::quit();
+
 }
 
 void MainWindow::on_pbLoadData_clicked()
@@ -322,6 +323,9 @@ void MainWindow::on_pbLoadData_clicked()
     fileName.chop(4);
     if(fileName!=NULL)
     {
+    referencePoints.clear();
+    distortedPoints.clear();
+
     QFile fileRef(fileName+".ref");
     if(fileRef.open(QIODevice::ReadOnly))
       {
@@ -364,6 +368,8 @@ void MainWindow::on_pbLoadData_clicked()
         ui->pbCancleSearch->setEnabled(false);
         ui->pbExit->setEnabled(true);
     }
+
+    ShowImage();
 
 }
 
