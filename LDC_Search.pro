@@ -28,11 +28,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    search.cpp
+    search.cpp \
+    statistics.cpp \
+    distortion.cpp
 
 HEADERS += \
         mainwindow.h \
-    search.h
+    search.h \
+    statistics.h \
+    distortion.h
 
 FORMS += \
         mainwindow.ui
