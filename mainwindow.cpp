@@ -310,7 +310,7 @@ void MainWindow::on_pbLoadData_clicked()
     if(fileName!=NULL)
     {
     QFile file(fileName+".dis");
-      if(file.open(QIODevice::WriteOnly))
+      if(file.open(QIODevice::ReadOnly))
       {
           QTextStream out(&file);
           for(int i=0;i<undistortedPoints.size();i++)
