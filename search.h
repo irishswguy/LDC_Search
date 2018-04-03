@@ -7,6 +7,12 @@
 #include <QThread>
 #include <QPoint>
 #include <QtMath>
+#include <distortion.h>
+#include <QDateTime>
+
+
+#define PROBLEM_DIM 3
+
 
 struct SEARCH_STATUS
 {
@@ -28,6 +34,17 @@ public:
 
     bool Cancel = false;
     struct SEARCH_STATUS SearchStatus;
+    DISTORTION_VARS DV;
+    DISTORTION_VARS DV2;
+
+
+    //void S(void);
+    void S(double bounds[PROBLEM_DIM],int maxEvaluations);
+    void BruteForceSearch(void);
+    void toro(double (&x)[PROBLEM_DIM], double bounds[]);
+    int fix(double x);
+    double drand(double lower,double upper);
+
 
 
 public slots:
@@ -37,7 +54,8 @@ signals:
     void updateStatus(void);
     void signalUpdateTextStatus(QString);
 private:
-
+    
+    Distortion LDC;
 
 public slots:
 };

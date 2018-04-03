@@ -40,8 +40,8 @@ private:
     Search * search = new Search();
     QChartView *chartView;
     QChartView *chartViewConstants;
-    QVector <QPoint> referencePoints;
-    QVector <QPoint> distortedPoints;
+//    QVector <QPoint> referencePoints;
+//    QVector <QPoint> distortedPoints;
     QPixmap Image;
 };
 

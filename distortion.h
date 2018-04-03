@@ -1,17 +1,20 @@
 #ifndef DISTORTION_H
 #define DISTORTION_H
 
+#pragma once
+
 #include <QObject>
 #include <QVector>
 #include <QPoint>
 #include <QtMath>
 
+
 struct DISTORTION_VARS
 {
-    QVector <QPoint> reference;
-    QVector <QPoint> distorted;
-    QVector <QPoint> undistorted;
-    QVector <double> K;
+    QVector <QPoint> referencePoints;
+    QVector <QPoint> distortedPoints;
+    QVector <QPoint> undistortedPoints;
+    double K[3];
     double Angle;
     QPoint Center;
 };
@@ -21,11 +24,13 @@ class Distortion : public QObject
     Q_OBJECT
 public:
     explicit Distortion(QObject *parent = nullptr);
-    double getLDCError();
+    double getLDCError(DISTORTION_VARS &DV);
     double GetDistanceBetweenPoints(QPoint P1, QPoint P2);
-    QPoint getUndistortedPoint(QPoint p);
+    QPoint getUndistortedPoint(QPoint p,DISTORTION_VARS DV);
 
-    struct DISTORTION_VARS DV;
+    //struct DISTORTION_VARS DV;
+
+    bool ExtraK = false;
 
 signals:
 

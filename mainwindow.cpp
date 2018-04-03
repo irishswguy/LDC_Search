@@ -10,6 +10,13 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // See the random number generator
+    //qsrand(QDateTime::currentMSecsSinceEpoch() / 1000);
+    QDateTime cd = QDateTime::currentDateTime();
+    qsrand(cd.toTime_t());
+
+
+
     search->moveToThread(thread);
     connect(search, SIGNAL (updateStatus()), this, SLOT (updateStatus()));
     connect(search, SIGNAL (signalUpdateTextStatus(QString)), this, SLOT (slotUpdateTextStatus(QString)));
@@ -56,7 +63,7 @@ void MainWindow::PlotError()
 
     QLineSeries *series = new QLineSeries();
     for(int i=0;i<NumberOfSamples;i++){
-            qDebug() << search->SearchStatus.error.at(i);
+    //        qDebug() << search->SearchStatus.error.at(i);
             *series << QPointF(i,search->SearchStatus.error.at(i));
 
             }
@@ -86,7 +93,7 @@ void MainWindow::PlotError()
     axisY->setTickCount(5);
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
-    axisY->setMax(10.0);
+    axisY->setMax(10000.0);
     axisY->setMin(0.0);
 
     // We set the graph in the view
@@ -148,8 +155,8 @@ void MainWindow::PlotConstants()
     axisY->setTickCount(5);
     chart->addAxis(axisY, Qt::AlignLeft);
     K0series->attachAxis(axisY);
-    axisY->setMax(2.0);
-    axisY->setMin(-2.0);
+    axisY->setMax(0.5);
+    axisY->setMin(-0.5);
 
 
     K1series->attachAxis(axisY);
@@ -179,8 +186,8 @@ void MainWindow::ShowImage()
     paint->setRenderHint(QPainter::Antialiasing);
     paint->setRenderHint(QPainter::HighQualityAntialiasing);
 
-    Points = distortedPoints;
-    if(Points.size()==0)
+    Points = search->DV.undistortedPoints;
+    if(Points.size()<361)
         return;
 
     paint->setPen(Qt::green);
@@ -218,7 +225,7 @@ void MainWindow::ShowImage()
             paint->drawLine(P1,P2);
         }
 
-    Points = referencePoints;
+    Points = search->DV.referencePoints;
     path_reference = QPainterPath();
     paint->setPen(Qt::red);
     paint->setBrush(Qt::red);
@@ -249,13 +256,9 @@ void MainWindow::ShowImage()
             QPoint P2 = Points.at(Index2);
             paint->drawLine(P1,P2);
         }
-
-
-
     delete paint;
     ui->lbImage->setPixmap(Image);
-
-
+    QCoreApplication::processEvents();
 }
 
 void MainWindow::ShowSearchStatus()
@@ -265,12 +268,9 @@ void MainWindow::ShowSearchStatus()
         ui->lwSearchStatus->scrollToBottom();
         }
 }
-
-
-
 void MainWindow::updateStatus()
 {
-    qDebug() << "Status";
+  //  qDebug() << "Status";
     PlotError();
     PlotConstants();
     ShowImage();
@@ -278,12 +278,12 @@ void MainWindow::updateStatus()
 
     if(search->SearchStatus.Finished==true)
     {
+        ui->pbLoadData->setEnabled(true);
         ui->pbStartSearch->setEnabled(true);
         ui->pbCancleSearch->setEnabled(false);
         ui->pbExit->setEnabled(true);
     }
 }
-
 void MainWindow::on_pbStartSearch_clicked()
 {
      search->Start();
@@ -305,14 +305,11 @@ void MainWindow::on_pbCancleSearch_clicked()
     ui->pbStartSearch->setEnabled(true);
     ui->pbCancleSearch->setEnabled(false);
     ui->pbExit->setEnabled(true);
-
-
 }
 
 void MainWindow::on_pbExit_clicked()
 {
     QApplication::quit();
-
 }
 
 void MainWindow::on_pbLoadData_clicked()
@@ -323,8 +320,8 @@ void MainWindow::on_pbLoadData_clicked()
     fileName.chop(4);
     if(fileName!=NULL)
     {
-    referencePoints.clear();
-    distortedPoints.clear();
+    search->DV.referencePoints.clear();
+    search->DV.distortedPoints.clear();
 
     QFile fileRef(fileName+".ref");
     if(fileRef.open(QIODevice::ReadOnly))
@@ -338,7 +335,7 @@ void MainWindow::on_pbLoadData_clicked()
                 QString sX = tmpList[0];
                 QString sY = tmpList[1];
                 QPoint P(sX.toInt(),sY.toInt());
-                referencePoints.push_back(P);
+                search->DV.referencePoints.push_back(P);
              }
           fileRef.close();
       }
@@ -357,7 +354,7 @@ void MainWindow::on_pbLoadData_clicked()
                   QString sX = tmpList[0];
                   QString sY = tmpList[1];
                   QPoint P(sX.toInt(),sY.toInt());
-                  distortedPoints.push_back(P);
+                  search->DV.distortedPoints.push_back(P);
                }
             fileDis.close();
         }
@@ -368,6 +365,8 @@ void MainWindow::on_pbLoadData_clicked()
         ui->pbCancleSearch->setEnabled(false);
         ui->pbExit->setEnabled(true);
     }
+
+    search->DV.undistortedPoints = search->DV.distortedPoints;
 
     ShowImage();
 
