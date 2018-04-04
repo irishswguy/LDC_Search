@@ -67,12 +67,18 @@ void MainWindow::PlotError()
             *series << QPointF(i,search->SearchStatus.error.at(i));
 
             }
+    if(search->SearchStatus.error.size()>0)
+        ui->lbError->setText(QString::number(search->SearchStatus.error.back(),'f',1));
+    else
+        ui->lbError->setText("Error :");
+
 
     QChart *chart = new QChart();
     chart->addSeries(series);
 
     chart->legend()->hide();
     chart->setTitle("Search Error");
+    //chart->set
 
     // Adjusting the Axes of the Graph
     QValueAxis *axisX = new QValueAxis();
@@ -88,13 +94,15 @@ void MainWindow::PlotError()
     axisX->setMin(0.0);
 
     QValueAxis *axisY = new QValueAxis();
+    //QLogValueAxis *axisY = new QLogValueAxis();
     axisY->setTitleText("Error Value");
     axisY->setLabelFormat("%g");
     axisY->setTickCount(5);
     chart->addAxis(axisY, Qt::AlignLeft);
-    series->attachAxis(axisY);
     axisY->setMax(10000.0);
-    axisY->setMin(0.0);
+    axisY->setMin(100.0);
+
+    series->attachAxis(axisY);
 
     // We set the graph in the view
     chartView->setChart(chart);
@@ -330,7 +338,7 @@ void MainWindow::on_pbLoadData_clicked()
              while (!in.atEnd())
              {
                 QString line = in.readLine();
-                qDebug() << line;
+   //             qDebug() << line;
                 QStringList tmpList = line.split(QRegExp(","));
                 QString sX = tmpList[0];
                 QString sY = tmpList[1];
@@ -349,7 +357,7 @@ void MainWindow::on_pbLoadData_clicked()
                while (!in.atEnd())
                {
                   QString line = in.readLine();
-                  qDebug() << line;
+       //           qDebug() << line;
                   QStringList tmpList = line.split(QRegExp(","));
                   QString sX = tmpList[0];
                   QString sY = tmpList[1];

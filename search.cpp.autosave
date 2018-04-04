@@ -262,13 +262,6 @@ void Search::LRSearch(void)
 
     LRSearchCopyParticle(0);
 
-//    *DV.K = *PS.particle.at(0).K;
-
-//    DV.K[0] = PS.particle.at(0).K[0];
-//    DV.K[1] = PS.particle.at(0).K[1];
-//    DV.K[2] = PS.particle.at(0).K[2];
-
-
     double fitness = LDC.getLDCError(DV);
 
     qDebug() << fitness;

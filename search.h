@@ -24,6 +24,23 @@ struct SEARCH_STATUS
     QString qsStatus;
 };
 
+struct PARTICLE
+{
+    double K[3];
+    double Angle;
+    QPoint Center;
+    double BestError;
+};
+
+struct PARTICLE_SEARCH
+{
+    QVector <PARTICLE> particle;
+    double GlobalBestError;
+    double GlobalBestK[3];
+    double GlobalBestAngle;
+    QPoint GlobalBestCenter;
+};
+
 class Search : public QObject
 {
     Q_OBJECT
@@ -35,17 +52,21 @@ public:
     bool Cancel = false;
     struct SEARCH_STATUS SearchStatus;
     DISTORTION_VARS DV;
-    DISTORTION_VARS DV2;
 
-
-    //void S(void);
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
+    //---------------------------------------------------------------------
+    void LRSearch(void);
+    void LRSearchInit(void);
+    void LRSearchCopyParticle(int p);
+
+
+
+
+    //---------------------------------------------------------------------
     void BruteForceSearch(void);
     void toro(double (&x)[PROBLEM_DIM], double bounds[]);
     int fix(double x);
     double drand(double lower,double upper);
-
-
 
 public slots:
     void process();
@@ -56,6 +77,7 @@ signals:
 private:
     
     Distortion LDC;
+    PARTICLE_SEARCH PS;
 
 public slots:
 };
