@@ -9,6 +9,7 @@
 #include <QtMath>
 #include <distortion.h>
 #include <QDateTime>
+#include <algorithm>
 
 
 #define PROBLEM_DIM 3
@@ -30,6 +31,9 @@ struct PARTICLE
     double Angle;
     QPoint Center;
     double BestError;
+    bool operator<(const PARTICLE &other) const {
+      return (BestError < other.BestError);
+    }
 };
 
 struct PARTICLE_SEARCH
@@ -58,6 +62,8 @@ public:
     void LRSearch(void);
     void LRSearchInit(void);
     void LRSearchCopyParticle(int p);
+    void LRSearchMutate(QVector <PARTICLE> SelectedParticles);
+
 
 
 
@@ -67,6 +73,7 @@ public:
     void toro(double (&x)[PROBLEM_DIM], double bounds[]);
     int fix(double x);
     double drand(double lower,double upper);
+    bool randChoice(void);
 
 public slots:
     void process();

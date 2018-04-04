@@ -26,31 +26,31 @@ void Search::process() {
 
     LRSearch();
 
-    double bounds[]={-0.2,0.2};
-    S(bounds,150);
+//    double bounds[]={-0.2,0.2};
+//    S(bounds,150);
 
-    SearchStatus.qsStatus ="";
-    emit signalUpdateTextStatus("Search is finished.....");
+//    SearchStatus.qsStatus ="";
+//    emit signalUpdateTextStatus("Search is finished.....");
 
-    emit signalUpdateTextStatus(" ");
-    emit signalUpdateTextStatus("---------Best Results-------");
-    emit signalUpdateTextStatus("  K0 :"+QString::number(DV.K[0]));
-    emit signalUpdateTextStatus("  K1 :"+QString::number(DV.K[1]));
-    emit signalUpdateTextStatus("  K2 :"+QString::number(DV.K[2]));
-    emit signalUpdateTextStatus("  K3 :"+QString::number(DV.K[3]));
-    emit signalUpdateTextStatus("  Angle    = 0.964");
-    emit signalUpdateTextStatus("  Centre   = (567,234)");
-    emit signalUpdateTextStatus(" ");
+//    emit signalUpdateTextStatus(" ");
+//    emit signalUpdateTextStatus("---------Best Results-------");
+//    emit signalUpdateTextStatus("  K0 :"+QString::number(DV.K[0]));
+//    emit signalUpdateTextStatus("  K1 :"+QString::number(DV.K[1]));
+//    emit signalUpdateTextStatus("  K2 :"+QString::number(DV.K[2]));
+//    emit signalUpdateTextStatus("  K3 :"+QString::number(DV.K[3]));
+//    emit signalUpdateTextStatus("  Angle    = 0.964");
+//    emit signalUpdateTextStatus("  Centre   = (567,234)");
+//    emit signalUpdateTextStatus(" ");
 
 
-    SearchStatus.Finished=true;
-    emit finished();
-    return;
+//    SearchStatus.Finished=true;
+//    emit finished();
+//    return;
 
-//CANCEL:
-    qDebug() << "Search Process Canceled";
-    SearchStatus.Finished=true;
-    emit finished();
+////CANCEL:
+//    qDebug() << "Search Process Canceled";
+//    SearchStatus.Finished=true;
+//    emit finished();
 
 }
 
@@ -243,35 +243,85 @@ double Search::drand(double lower,double upper)
     return r;
 }
 
-#define MAX_PARTICLES 100
+bool Search::randChoice()
+{
+    if(drand(0,1)>=0.5) return true;
+    return false;
+}
+
+#define MAX_PARTICLES 250
 #define ANGLE_MIN -5
 #define ANGLE_MAX 5
 #define CENTER_MIN -100
 #define CENTER_MAX 100
-#define K0_MIN -0.2
-#define K0_MAX 0.2
-#define K1_MIN -0.2
-#define K1_MAX 0.2
-#define K2_MIN -0.2
-#define K2_MAX 0.2
+#define K0_MIN -0.4
+#define K0_MAX 0.4
+#define K1_MIN -0.4
+#define K1_MAX 0.4
+#define K2_MIN -0.4
+#define K2_MAX 0.4
+#define QTY_SELECTED_PARICLES 50
+#define RANDOMNESS 10
 
 void Search::LRSearch(void)
 {
+QVector <double> fitness;
+QVector <PARTICLE> SelectedParticles;
 
+    // Randomly Initalise All the Particles
     LRSearchInit();
 
-    LRSearchCopyParticle(0);
+    for(int j=0;j<10;j++)
+    {
+        // Test the particles
+        for(int i=0;i<PS.particle.size();i++)
+        {
+        LRSearchCopyParticle(i);
+        double Error = LDC.getLDCError(DV);
+        PS.particle[i].BestError=Error;
+        fitness.push_back(Error);
+        }
 
-//    *DV.K = *PS.particle.at(0).K;
+        // Sort the Particles - lowest errors first
+        qSort(PS.particle);
 
-//    DV.K[0] = PS.particle.at(0).K[0];
-//    DV.K[1] = PS.particle.at(0).K[1];
-//    DV.K[2] = PS.particle.at(0).K[2];
+        qDebug() << "j: " << j << " BestError : "<< PS.particle[0].BestError;
+        qDebug() << "K[0]: " << PS.particle.at(0).K[0];
+        qDebug() << "K[1]: " << PS.particle.at(0).K[1];
+        qDebug() << "K[2]: " << PS.particle.at(0).K[2];
+
+        SearchStatus.error.push_back(PS.particle[0].BestError);
+        SearchStatus.K[0].push_back(PS.particle.at(0).K[0]);
+        SearchStatus.K[1].push_back(PS.particle.at(0).K[1]);
+        SearchStatus.K[2].push_back(PS.particle.at(0).K[2]);
+        SearchStatus.Angle.push_back(0.15);
+        SearchStatus.Centre= QPoint(500,500);
+       // DV2=DV;
+        SearchStatus.qsStatus = "Search Number: " + QString::number(j) + " Error: " + QString::number(PS.particle[0].BestError);
+
+        LRSearchCopyParticle(0);
+        LDC.getLDCError(DV);
+
+        emit updateStatus();
+        QThread::msleep(500);
 
 
-    double fitness = LDC.getLDCError(DV);
+        // Select Particles for mutation
+        for(int i=0;i<QTY_SELECTED_PARICLES;i++)
+            SelectedParticles.push_back(PS.particle.at(i));
 
-    qDebug() << fitness;
+        PS.particle.clear();
+
+        // Perform Mutation of selected particles
+
+        LRSearchMutate(SelectedParticles);
+    }
+
+
+
+
+
+
 
 }
 
@@ -306,5 +356,59 @@ void Search::LRSearchCopyParticle(int p)
     DV.K[0] = PS.particle.at(p).K[0];
     DV.K[1] = PS.particle.at(p).K[1];
     DV.K[2] = PS.particle.at(p).K[2];
+    DV.Angle = PS.particle.at(p).Angle;
+    DV.Center = PS.particle.at(p).Center;
+
+}
+
+void Search::LRSearchMutate(QVector<PARTICLE> SelectedParticles)
+{
+
+    for(int cp=0;cp<SelectedParticles.size();cp++)      // Current Particle
+        for(int pp=0;pp<SelectedParticles.size();pp++)  // Patner Particle
+        {
+            PARTICLE particle;
+            particle.BestError = std::numeric_limits<double>::max();
+
+            if(randChoice()==true)
+                particle.Angle = SelectedParticles.at(cp).Angle + drand(ANGLE_MIN/10,ANGLE_MAX/10);
+            else
+                particle.Angle = SelectedParticles.at(pp).Angle + drand(ANGLE_MIN/10,ANGLE_MAX/10);
+
+            int X = (int)drand(CENTER_MIN,CENTER_MAX);
+            int Y = (int)drand(CENTER_MIN,CENTER_MAX);
+
+            if(randChoice()==true)
+                X = SelectedParticles.at(cp).Center.x() + drand(CENTER_MIN/10,CENTER_MAX/10);
+            else
+                X = SelectedParticles.at(pp).Center.x() + drand(CENTER_MIN/10,CENTER_MAX/10);
+
+            if(randChoice()==true)
+                Y = SelectedParticles.at(cp).Center.y() + drand(CENTER_MIN/10,CENTER_MAX/10);
+            else
+                Y = SelectedParticles.at(pp).Center.y() + drand(CENTER_MIN/10,CENTER_MAX/10);
+
+            particle.Center.setX(X);
+            particle.Center.setY(Y);
+
+            if(randChoice()==true)
+                particle.K[0] = SelectedParticles.at(cp).K[0] + drand(K0_MIN/10,K0_MAX/10);
+            else
+                particle.K[0] = SelectedParticles.at(pp).K[0] + drand(K0_MIN/10,K0_MAX/10);
+
+            if(randChoice()==true)
+                particle.K[1] = SelectedParticles.at(cp).K[1] + drand(K0_MIN/10,K0_MAX/10);
+            else
+                particle.K[1] = SelectedParticles.at(pp).K[1] + drand(K0_MIN/10,K0_MAX/10);
+
+            if(randChoice()==true)
+                particle.K[2] = SelectedParticles.at(cp).K[2] + drand(K0_MIN/10,K0_MAX/10);
+            else
+                particle.K[2] = SelectedParticles.at(pp).K[2] + drand(K0_MIN/10,K0_MAX/10);
+
+
+            PS.particle.push_back(particle);
+        }
+
 }
 
