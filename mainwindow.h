@@ -8,6 +8,11 @@
 #include <QImage>
 #include <QPixmap>
 #include <QtCharts>
+#include <Q3DScatter>
+#include <QtDataVisualization>
+
+using namespace QtDataVisualization;
+
 
 namespace Ui {
 class MainWindow;
@@ -33,6 +38,12 @@ private slots:
     void on_pbExit_clicked();
     void on_pbLoadData_clicked();
     void slotUpdateTextStatus(QString);
+
+    void on_cbS_clicked(bool checked);
+
+    void on_cbLR_clicked(bool checked);
+
+    void on_cbGP_clicked(bool checked);
 
 private:
     Ui::MainWindow *ui;

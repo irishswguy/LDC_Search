@@ -385,3 +385,20 @@ void MainWindow::slotUpdateTextStatus(QString message)
     ui->lwSearchStatus->addItem(message);
     ui->lwSearchStatus->scrollToBottom();
 }
+
+
+
+void MainWindow::on_cbS_clicked(bool checked)
+{
+    search->S_Search = checked;
+}
+
+void MainWindow::on_cbLR_clicked(bool checked)
+{
+    search->LR_Search = checked;
+}
+
+void MainWindow::on_cbGP_clicked(bool checked)
+{
+    search->GP_Search = checked;
+}

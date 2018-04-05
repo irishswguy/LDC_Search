@@ -57,6 +57,10 @@ public:
     struct SEARCH_STATUS SearchStatus;
     DISTORTION_VARS DV;
 
+    bool S_Search=true;
+    bool LR_Search=false;
+    bool GP_Search=false;
+
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
     //---------------------------------------------------------------------
     void LRSearch(void);

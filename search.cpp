@@ -24,28 +24,36 @@ void Search::process() {
 
     qDebug() << "Search Process Started";
 
-    LRSearch();
+    if( LR_Search == true)
+            LRSearch();
 
-//    double bounds[]={-0.2,0.2};
-//    S(bounds,150);
+    if(S_Search==true){
+        double bounds[]={-0.2,0.2};
+        S(bounds,200);
+        }
 
-//    SearchStatus.qsStatus ="";
-//    emit signalUpdateTextStatus("Search is finished.....");
+    if(GP_Search==true)
+        {
+        qDebug() << "To Be Done....";
+        }
 
-//    emit signalUpdateTextStatus(" ");
-//    emit signalUpdateTextStatus("---------Best Results-------");
-//    emit signalUpdateTextStatus("  K0 :"+QString::number(DV.K[0]));
-//    emit signalUpdateTextStatus("  K1 :"+QString::number(DV.K[1]));
-//    emit signalUpdateTextStatus("  K2 :"+QString::number(DV.K[2]));
-//    emit signalUpdateTextStatus("  K3 :"+QString::number(DV.K[3]));
-//    emit signalUpdateTextStatus("  Angle    = 0.964");
-//    emit signalUpdateTextStatus("  Centre   = (567,234)");
-//    emit signalUpdateTextStatus(" ");
+    SearchStatus.qsStatus ="";
+    emit signalUpdateTextStatus("Search is finished.....");
+
+    emit signalUpdateTextStatus(" ");
+    emit signalUpdateTextStatus("---------Best Results-------");
+    emit signalUpdateTextStatus("  K0 :"+QString::number(DV.K[0]));
+    emit signalUpdateTextStatus("  K1 :"+QString::number(DV.K[1]));
+    emit signalUpdateTextStatus("  K2 :"+QString::number(DV.K[2]));
+    emit signalUpdateTextStatus("  K3 :"+QString::number(DV.K[3]));
+    emit signalUpdateTextStatus("  Angle    = 0.964");
+    emit signalUpdateTextStatus("  Centre   = (567,234)");
+    emit signalUpdateTextStatus(" ");
 
 
-//    SearchStatus.Finished=true;
-//    emit finished();
-//    return;
+    SearchStatus.Finished=true;
+    emit finished();
+    return;
 
 ////CANCEL:
 //    qDebug() << "Search Process Canceled";
@@ -120,7 +128,7 @@ double  StepSize[PROBLEM_DIM];
         // Initalise the Startup-Conditions
         for(int i=0;i<PROBLEM_DIM;i++){
             best[i] = drand(bounds[0],bounds[1]);
-            StepSize[i]= 0.4 * (bounds[1]-bounds[0]);   // Step is 40% of bounds
+            StepSize[i]= 0.04 * (bounds[1]-bounds[0]);   // Step is 40% of bounds
             }
 
         QDateTime cd = QDateTime::currentDateTime();
@@ -154,7 +162,7 @@ double  StepSize[PROBLEM_DIM];
                     }
                     else                                                                            // Else test 1/2 step opposite direction
                     {
-                        DV.K[i] = best[i]+(StepSize[i]/2);
+                        DV.K[i] = best[i]+(StepSize[i]/1.0);
                         toro(DV.K, bounds);
                         fitness = LDC.getLDCError(DV);
 
@@ -172,7 +180,7 @@ double  StepSize[PROBLEM_DIM];
 
                 if(Improved==false)                                                                 // If no improvment in any dimension
                     for(int i=0;i<PROBLEM_DIM;i++)                                                  // reduce all step sizes by half.
-                        StepSize[i]= StepSize[i]/2;
+                        StepSize[i]= StepSize[i]/1.1;
 
                 SearchStatus.error.push_back(fBest);
                 SearchStatus.K[0].push_back(DV.K[0]);
@@ -181,7 +189,7 @@ double  StepSize[PROBLEM_DIM];
                 SearchStatus.Angle.push_back(0.15);
                 SearchStatus.Centre= QPoint(500,500);
                // DV2=DV;
-                SearchStatus.qsStatus = "Search Number: " + QString::number(j) + " Error: " + QString::number(fBest);
+                SearchStatus.qsStatus = "S-Search Number: " + QString::number(j) + "    Error: " + QString::number(fBest,'f',1);
                 emit updateStatus();
 
         //        qDebug() << "j:" << j;
@@ -249,18 +257,18 @@ bool Search::randChoice()
     return false;
 }
 
-#define MAX_PARTICLES 250
+#define MAX_PARTICLES 1000
 #define ANGLE_MIN -5
 #define ANGLE_MAX 5
 #define CENTER_MIN -100
 #define CENTER_MAX 100
-#define K0_MIN -0.4
-#define K0_MAX 0.4
-#define K1_MIN -0.4
-#define K1_MAX 0.4
-#define K2_MIN -0.4
-#define K2_MAX 0.4
-#define QTY_SELECTED_PARICLES 50
+#define K0_MIN -0.2
+#define K0_MAX 0.2
+#define K1_MIN -0.2
+#define K1_MAX 0.2
+#define K2_MIN -0.2
+#define K2_MAX 0.2
+#define QTY_SELECTED_PARICLES 200
 #define RANDOMNESS 10
 
 void Search::LRSearch(void)
@@ -271,7 +279,7 @@ QVector <PARTICLE> SelectedParticles;
     // Randomly Initalise All the Particles
     LRSearchInit();
 
-    for(int j=0;j<10;j++)
+    for(int j=0;j<5;j++)
     {
         // Test the particles
         for(int i=0;i<PS.particle.size();i++)
@@ -297,7 +305,7 @@ QVector <PARTICLE> SelectedParticles;
         SearchStatus.Angle.push_back(0.15);
         SearchStatus.Centre= QPoint(500,500);
        // DV2=DV;
-        SearchStatus.qsStatus = "Search Number: " + QString::number(j) + " Error: " + QString::number(PS.particle[0].BestError);
+        SearchStatus.qsStatus = "LRSearch Number: " + QString::number(j) + "    Error: " + QString::number(PS.particle[0].BestError,'f',1);
 
         LRSearchCopyParticle(0);
         LDC.getLDCError(DV);
