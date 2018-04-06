@@ -19,11 +19,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     search->moveToThread(thread);
     connect(search, SIGNAL (updateStatus()), this, SLOT (updateStatus()));
-    connect(search, SIGNAL (signalUpdateTextStatus(QString)), this, SLOT (slotUpdateTextStatus(QString)));
-
     connect(thread, SIGNAL (started()), search, SLOT (process()));
     connect(search, SIGNAL (finished()), thread, SLOT (quit()));
-    connect(search, SIGNAL (finished()),  this, SLOT (updateStatus()));
+//    connect(search, SIGNAL (finished()),  this, SLOT (updateStatus()));
 
 
     chartView = new QChartView(this);
@@ -68,9 +66,9 @@ void MainWindow::PlotError()
 
             }
     if(search->SearchStatus.error.size()>0)
-        ui->lbError->setText(QString::number(search->SearchStatus.error.back(),'f',1));
+        ui->lbError->setText("Error: "+QString::number(search->SearchStatus.error.back(),'f',1));
     else
-        ui->lbError->setText("Error :");
+        ui->lbError->setText("Error : xxx");
 
 
     QChart *chart = new QChart();
@@ -271,10 +269,16 @@ void MainWindow::ShowImage()
 
 void MainWindow::ShowSearchStatus()
 {
-    if(search->SearchStatus.qsStatus!=""){
-        ui->lwSearchStatus->addItem(search->SearchStatus.qsStatus);
-        ui->lwSearchStatus->scrollToBottom();
-        }
+    ui->lbStatus->setText(search->SearchStatus.qsSearchStatus);
+}
+
+void MainWindow::ShowSearchResults()
+{
+    for(int i=0; i<search->SearchStatus.ResultsStatus.size();i++)
+        ui->lwSearchStatus->addItem(search->SearchStatus.ResultsStatus.at(i));
+
+    ui->lwSearchStatus->scrollToBottom();
+
 }
 void MainWindow::updateStatus()
 {
@@ -283,7 +287,10 @@ void MainWindow::updateStatus()
     PlotConstants();
     ShowImage();
     ShowSearchStatus();
+    ShowSearchResults();
 
+
+    ui->pbProgress->setValue(search->SearchStatus.SearchProgress);
     if(search->SearchStatus.Finished==true)
     {
         ui->pbLoadData->setEnabled(true);
@@ -295,10 +302,12 @@ void MainWindow::updateStatus()
 void MainWindow::on_pbStartSearch_clicked()
 {
      search->Start();
+     search->TestCycles = ui->sbTestCycles->value();
      thread->start();
      PlotError();
      PlotConstants();
 
+     ui->pbProgress->setMaximum(search->TestCycles*250);
      ui->pbLoadData->setEnabled(false);
      ui->pbStartSearch->setEnabled(false);
      ui->pbCancleSearch->setEnabled(true);
@@ -380,11 +389,15 @@ void MainWindow::on_pbLoadData_clicked()
 
 }
 
-void MainWindow::slotUpdateTextStatus(QString message)
-{
-    ui->lwSearchStatus->addItem(message);
-    ui->lwSearchStatus->scrollToBottom();
-}
+//void MainWindow::slotUpdateTextStatus(QString message)
+//{
+//    if(message.size()!=0){
+
+//    ui->lbStatus->setText(message);
+////            SearchStatus->addItem(message);
+////    ui->lwSearchStatus->scrollToBottom();
+//    }
+//}
 
 
 

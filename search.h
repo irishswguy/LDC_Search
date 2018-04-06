@@ -10,6 +10,7 @@
 #include <distortion.h>
 #include <QDateTime>
 #include <algorithm>
+#include <statistics.h>
 
 
 #define PROBLEM_DIM 3
@@ -22,7 +23,10 @@ struct SEARCH_STATUS
     QVector <double> Angle;
     QPoint  Centre;
     bool Finished=false;
-    QString qsStatus;
+    QString qsSearchStatus;
+    QVector <QString> ResultsStatus;
+    int SearchProgress=0;
+    int CurrentTestCycle=0;
 };
 
 struct PARTICLE
@@ -60,6 +64,9 @@ public:
     bool S_Search=true;
     bool LR_Search=false;
     bool GP_Search=false;
+    int TestCycles=1;
+
+     QVector <double> StatisticalData;
 
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
     //---------------------------------------------------------------------
@@ -84,11 +91,16 @@ public slots:
 signals:
     void finished();
     void updateStatus(void);
-    void signalUpdateTextStatus(QString);
+//    void signalUpdateSearchStatus(QString);
+//    void signalUpdateResultsStatus(QString);
+//    void signalUpdateProgressStatus(QString);
+
+
 private:
     
     Distortion LDC;
     PARTICLE_SEARCH PS;
+    Statistics statistics;
 
 public slots:
 };

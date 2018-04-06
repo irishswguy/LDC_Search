@@ -29,6 +29,8 @@ public:
     void PlotConstants(void);
     void ShowImage();
     void ShowSearchStatus();
+    void ShowSearchResults();
+
 
 
 private slots:
@@ -37,7 +39,6 @@ private slots:
     void on_pbCancleSearch_clicked();
     void on_pbExit_clicked();
     void on_pbLoadData_clicked();
-    void slotUpdateTextStatus(QString);
 
     void on_cbS_clicked(bool checked);
 

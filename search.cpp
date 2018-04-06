@@ -16,6 +16,9 @@ void Search::Start()
     SearchStatus.K[2].clear();
     SearchStatus.error.clear();
     SearchStatus.Angle.clear();
+    SearchStatus.qsSearchStatus = "";
+    SearchStatus.SearchProgress=0;
+
     Cancel = false;
 
 }
@@ -24,12 +27,49 @@ void Search::process() {
 
     qDebug() << "Search Process Started";
 
+    SearchStatus.ResultsStatus.clear();
+
+
     if( LR_Search == true)
             LRSearch();
 
     if(S_Search==true){
         double bounds[]={-0.2,0.2};
-        S(bounds,200);
+        SearchStatus.ResultsStatus.push_back("Starting S-Search Algrothim");
+        SearchStatus.ResultsStatus.push_back("------------------------------------------");
+        emit updateStatus();
+
+        QThread::msleep(500);
+        SearchStatus.ResultsStatus.clear();
+
+        for(int i=0;i<TestCycles;i++){
+            Start();
+            SearchStatus.CurrentTestCycle=i;;
+
+            S(bounds,250);
+
+            SearchStatus.ResultsStatus.push_back("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.at(i),'f',2));
+            emit updateStatus();
+            QThread::msleep(500);
+            SearchStatus.ResultsStatus.clear();
+            emit finished();
+            }
+        double Mean = statistics.getMean(StatisticalData);
+        double StdDev = statistics.getStdDeviation(StatisticalData,Mean);
+
+        SearchStatus.ResultsStatus.push_back("---------Best Results-------");
+        SearchStatus.ResultsStatus.push_back("  K0 :"+QString::number(DV.K[0]));
+        SearchStatus.ResultsStatus.push_back("  K1 :"+QString::number(DV.K[1]));
+        SearchStatus.ResultsStatus.push_back("  K2 :"+QString::number(DV.K[2]));
+        SearchStatus.ResultsStatus.push_back("  Angle    = 0.964");
+         SearchStatus.ResultsStatus.push_back("  Centre   = (567,234)");
+        SearchStatus.ResultsStatus.push_back(" ");
+        SearchStatus.ResultsStatus.push_back("Mean   : " + QString::number(Mean,'f',1));
+        SearchStatus.ResultsStatus.push_back("StdDev : " + QString::number(StdDev,'f',1));
+        SearchStatus.ResultsStatus.push_back(" ");
+        SearchStatus.Finished=true;
+        emit updateStatus();
+
         }
 
     if(GP_Search==true)
@@ -37,22 +77,7 @@ void Search::process() {
         qDebug() << "To Be Done....";
         }
 
-    SearchStatus.qsStatus ="";
-    emit signalUpdateTextStatus("Search is finished.....");
 
-    emit signalUpdateTextStatus(" ");
-    emit signalUpdateTextStatus("---------Best Results-------");
-    emit signalUpdateTextStatus("  K0 :"+QString::number(DV.K[0]));
-    emit signalUpdateTextStatus("  K1 :"+QString::number(DV.K[1]));
-    emit signalUpdateTextStatus("  K2 :"+QString::number(DV.K[2]));
-    emit signalUpdateTextStatus("  K3 :"+QString::number(DV.K[3]));
-    emit signalUpdateTextStatus("  Angle    = 0.964");
-    emit signalUpdateTextStatus("  Centre   = (567,234)");
-    emit signalUpdateTextStatus(" ");
-
-
-    SearchStatus.Finished=true;
-    emit finished();
     return;
 
 ////CANCEL:
@@ -125,14 +150,16 @@ double  fBest = std::numeric_limits<double>::max();
 int     j = 0;
 double  StepSize[PROBLEM_DIM];
 
+
+        QDateTime cd = QDateTime::currentDateTime();
+        qsrand(cd.toTime_t());
+
         // Initalise the Startup-Conditions
         for(int i=0;i<PROBLEM_DIM;i++){
             best[i] = drand(bounds[0],bounds[1]);
             StepSize[i]= 0.04 * (bounds[1]-bounds[0]);   // Step is 40% of bounds
             }
 
-        QDateTime cd = QDateTime::currentDateTime();
-        qsrand(cd.toTime_t());
 
         DV.K[0] = drand(-0.2,0.2);
         DV.K[1] = drand(-0.2,0.2);
@@ -188,22 +215,18 @@ double  StepSize[PROBLEM_DIM];
                 SearchStatus.K[2].push_back(DV.K[2]);
                 SearchStatus.Angle.push_back(0.15);
                 SearchStatus.Centre= QPoint(500,500);
-               // DV2=DV;
-                SearchStatus.qsStatus = "S-Search Number: " + QString::number(j) + "    Error: " + QString::number(fBest,'f',1);
-                emit updateStatus();
+                SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
 
-        //        qDebug() << "j:" << j;
+                SearchStatus.SearchProgress = j*TestCycles;
+
+                emit updateStatus();
 
                 QThread::msleep(500);
 
             }
 
-//        Results Data;                                                                               // Save the data for this run for
-//        Data.Best = fBest;
-//         for(int i=0;i<PROBLEM_DIM;i++)   // statistical analysis later
-//            Data.K.push_back(best[i]);
 
-        //        StatisticalData.push_back(Data);
+          StatisticalData.push_back(fBest);
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -304,8 +327,7 @@ QVector <PARTICLE> SelectedParticles;
         SearchStatus.K[2].push_back(PS.particle.at(0).K[2]);
         SearchStatus.Angle.push_back(0.15);
         SearchStatus.Centre= QPoint(500,500);
-       // DV2=DV;
-        SearchStatus.qsStatus = "LRSearch Number: " + QString::number(j) + "    Error: " + QString::number(PS.particle[0].BestError,'f',1);
+        SearchStatus.qsSearchStatus = "LRSearch Number: " + QString::number(j) + "    Error: " + QString::number(PS.particle[0].BestError,'f',1);
 
         LRSearchCopyParticle(0);
         LDC.getLDCError(DV);
