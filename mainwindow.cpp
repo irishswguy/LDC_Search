@@ -197,8 +197,15 @@ void MainWindow::ShowImage()
         return;
 
     paint->setPen(Qt::green);
-    paint->setBrush(Qt::green);
-    paint->drawEllipse(search->SearchStatus.Centre,10,10);
+    paint->setBrush(Qt::yellow);
+    QPoint CentrePoint(search->SearchStatus.Centre.x(),search->SearchStatus.Centre.y());
+    paint->drawEllipse(CentrePoint,15,15);
+    QString stringCentre = "( "+QString::number(CentrePoint.x())+","+QString::number(CentrePoint.y())+" )";
+    QFont font = paint->font() ;
+    font.setPointSize(font.pointSize() * 3);
+    paint->setFont(font);
+     paint->setPen(Qt::darkGreen);
+    paint->drawText(840,35,stringCentre);
 
     paint->setPen(Qt::blue);
      paint->setBrush(Qt::blue);
@@ -307,7 +314,7 @@ void MainWindow::on_pbStartSearch_clicked()
      PlotError();
      PlotConstants();
 
-     ui->pbProgress->setMaximum(search->TestCycles*250);
+     ui->pbProgress->setMaximum(search->TestCycles*1000);
      ui->pbLoadData->setEnabled(false);
      ui->pbStartSearch->setEnabled(false);
      ui->pbCancleSearch->setEnabled(true);

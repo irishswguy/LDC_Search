@@ -20,7 +20,6 @@ void Search::Start()
     SearchStatus.SearchProgress=0;
 
     Cancel = false;
-
 }
 
 void Search::process() {
@@ -35,6 +34,20 @@ void Search::process() {
 
     if(S_Search==true){
         double bounds[]={-0.2,0.2};
+        QVector <double> Bounds;
+        Bounds.push_back(-0.2);     // K[0]
+        Bounds.push_back(0.2);
+        Bounds.push_back(-0.2);     // K[1]
+        Bounds.push_back(0.2);
+        Bounds.push_back(-0.2);     // K[2]
+        Bounds.push_back(0.2);
+        Bounds.push_back(959-10);     // X-Offset
+        Bounds.push_back(959+10);
+        Bounds.push_back(539-10);     // Y-Offset
+        Bounds.push_back(539+10);
+        Bounds.push_back(-10);      // Angle
+        Bounds.push_back(10);
+
         SearchStatus.ResultsStatus.push_back("Starting S-Search Algrothim");
         SearchStatus.ResultsStatus.push_back("------------------------------------------");
         emit updateStatus();
@@ -46,7 +59,9 @@ void Search::process() {
             Start();
             SearchStatus.CurrentTestCycle=i;;
 
-            S(bounds,250);
+           // S(bounds,250);
+            S_New(Bounds,1000);
+
 
             SearchStatus.ResultsStatus.push_back("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.at(i),'f',2));
             emit updateStatus();
@@ -61,8 +76,13 @@ void Search::process() {
         SearchStatus.ResultsStatus.push_back("  K0 :"+QString::number(DV.K[0]));
         SearchStatus.ResultsStatus.push_back("  K1 :"+QString::number(DV.K[1]));
         SearchStatus.ResultsStatus.push_back("  K2 :"+QString::number(DV.K[2]));
-        SearchStatus.ResultsStatus.push_back("  Angle    = 0.964");
-         SearchStatus.ResultsStatus.push_back("  Centre   = (567,234)");
+        SearchStatus.ResultsStatus.push_back("  Angle :"+QString::number(DV.Angle));
+
+        QString CentreString = "  Centre : "
+                +QString::number(DV.Center.x())+
+                                 ","+QString::number(DV.Center.y()) ;
+
+        SearchStatus.ResultsStatus.push_back(CentreString);
         SearchStatus.ResultsStatus.push_back(" ");
         SearchStatus.ResultsStatus.push_back("Mean   : " + QString::number(Mean,'f',1));
         SearchStatus.ResultsStatus.push_back("StdDev : " + QString::number(StdDev,'f',1));
@@ -164,8 +184,15 @@ double  StepSize[PROBLEM_DIM];
         DV.K[0] = drand(-0.2,0.2);
         DV.K[1] = drand(-0.2,0.2);
         DV.K[2] = drand(-0.2,0.2);
+        DV.Center = QPoint(959,539);
+        DV.Angle = 0;
 
-        toro(DV.K, bounds); // Fix out of bounds conditions
+        int deltaX=(int)drand(-100,100);
+        int deltaY=(int)drand(-100,100);
+        int deltaXStepSize=80;
+        int deltaYStepSize=80;
+
+        //toro(DV.K, bounds); // Fix out of bounds conditions
 
         while (j < maxEvaluations)
             {
@@ -176,8 +203,11 @@ double  StepSize[PROBLEM_DIM];
                 {
                     fBest = LDC.getLDCError(DV);       // Get current best error
 
+                    deltaX = deltaX - deltaXStepSize;
+                    deltaY = deltaX - deltaXStepSize;
+
                     DV.K[i] = best[i]-StepSize[i];                                                     // Adjust K
-                    toro(DV.K, bounds);
+                  //  toro(DV.K, bounds);
 
                     double fitness = LDC.getLDCError(DV);    // Get new fittness
 
@@ -190,7 +220,7 @@ double  StepSize[PROBLEM_DIM];
                     else                                                                            // Else test 1/2 step opposite direction
                     {
                         DV.K[i] = best[i]+(StepSize[i]/1.0);
-                        toro(DV.K, bounds);
+                        //toro(DV.K, bounds);
                         fitness = LDC.getLDCError(DV);
 
                         if(fitness < fBest)                                                         // If improved save
@@ -226,15 +256,303 @@ double  StepSize[PROBLEM_DIM];
             }
 
 
-          StatisticalData.push_back(fBest);
+        StatisticalData.push_back(fBest);
+}
+void Search::S_New(QVector<double> Bounds,int maxEvaluations)
+{
+double  best[PROBLEM_DIM];
+double  fBest = std::numeric_limits<double>::max();
+int     j = 0;
+double  StepSize[PROBLEM_DIM];
+
+
+        QDateTime cd = QDateTime::currentDateTime();
+        qsrand(cd.toTime_t());
+
+        // Initalise the Startup-Conditions
+        for(int i=0;i<PROBLEM_DIM;i++){
+//            best[i] = drand(Bounds.at(0),Bounds.at(1));
+//            StepSize[i]= 0.04 * (Bounds.at(1)-Bounds.at(0));   // Step is 40% of bounds
+
+            best[i] = drand(Bounds.at(i*2),Bounds.at((i*2)+1));
+            StepSize[i]= 0.04 * (Bounds.at(i*2)-Bounds.at((i*2)+1));   // Step is 40% of bounds
+            }
+
+
+        DV.K[0] = drand(-0.2,0.2);
+        DV.K[1] = drand(-0.2,0.2);
+        DV.K[2] = drand(-0.2,0.2);
+        DV.Center = QPoint(959,539);
+        DV.Angle = 0;
+
+
+        toro(Bounds); // Fix out of bounds conditions
+
+        while (j < maxEvaluations)
+            {
+            if(Cancel==true)
+                return;
+            bool Improved=false;
+            for(int i = 0; i < PROBLEM_DIM && j < maxEvaluations; ++i)                              // Core iteration step
+                {
+                    fBest = LDC.getLDCError(DV);       // Get current best error
+
+                    switch(i)
+                    {
+                    case 0 :
+                    case 1 :
+                    case 2 : DV.K[i] = best[i]-StepSize[i];         break;
+                    case 3 : DV.Center.setX(best[i]-StepSize[i]);   break;
+                    case 4 : DV.Center.setY(best[i]-StepSize[i]);   break;
+                    case 5 : DV.Angle = best[i]-StepSize[i];     break;
+                    }
+                    toro(Bounds);
+
+                    double fitness = LDC.getLDCError(DV);    // Get new fittness
+
+                    if(fitness < fBest)                                                             // If improved then save
+                    {
+                        switch(i)
+                        {
+                        case 0 :
+                        case 1 :
+                        case 2 : best[i] = DV.K[i];  break;                                                   // Adjust K
+                        case 3 : best[i] = DV.Center.x();   break;
+                        case 4 : best[i] = DV.Center.y();   break;
+                        case 5 : best[i] = DV.Angle;  break;                                                   // Adjust K
+                        }
+
+
+                        Improved = true;
+                        fBest = fitness;
+                    }
+                    else                                                                            // Else test 1/2 step opposite direction
+                    {
+                        switch(i)
+                        {
+                        case 0 :
+                        case 1 :
+                        case 2 : DV.K[i] = best[i]+(StepSize[i]/1.1);           break;                                                   // Adjust K
+                        case 3 : DV.Center.setX(best[i]+(StepSize[i]/2));     break;
+                        case 4 : DV.Center.setY(best[i]+(StepSize[i]/2));     break;
+                        case 5 : DV.Angle = best[i]+(StepSize[i]/2);       break;                                                   // Adjust K
+                        }
+
+                        toro(Bounds);
+                        fitness = LDC.getLDCError(DV);
+
+                        if(fitness < fBest)                                                         // If improved save
+                        {
+                            switch(i)
+                            {
+                            case 0 :
+                            case 1 :
+                            case 2 : best[i] = DV.K[i]; break;                                                   // Adjust K
+                            case 3 : best[i] = DV.Center.x();   break;
+                            case 4 : best[i] = DV.Center.y();   break;
+                            case 5 : best[i] = DV.Angle; break;                                                   // Adjust K
+                            }
+
+                            Improved = true;
+                            fBest = fitness;
+                        }
+                        else
+                            switch(i)
+                            {
+                            case 0 :
+                            case 1 :
+                            case 2 : DV.K[i]=best[i];  break;                                                   // Adjust K
+                            case 3 : DV.Center.setX(best[i]);   break;
+                            case 4 : DV.Center.setY(best[i]);   break;
+                            case 5 : DV.Angle=best[i];  break;                                                   // Adjust K
+                            }
+                                                                                      // If no improvment in this step
+                    }                                                                               // go back to last value
+                j++;
+                }
+
+                if(Improved==false)                                                                 // If no improvment in any dimension
+                    for(int i=0;i<PROBLEM_DIM;i++)
+                        switch(i)
+                        {
+                        case 0 :
+                        case 1 :
+                        case 2 : StepSize[i]= StepSize[i]/1.1; break;
+                        case 3 : StepSize[i]= StepSize[i]/2; break;
+                        case 4 : StepSize[i]= StepSize[i]/2; break;
+                        case 5 : StepSize[i]= StepSize[i]/2; break;
+                        }
+                        // reduce all step sizes by half.
+                        //StepSize[i]= StepSize[i]/1.1;
+
+                SearchStatus.error.push_back(fBest);
+                SearchStatus.K[0].push_back(DV.K[0]);
+                SearchStatus.K[1].push_back(DV.K[1]);
+                SearchStatus.K[2].push_back(DV.K[2]);
+                SearchStatus.Angle.push_back(DV.Angle);
+                SearchStatus.Centre= DV.Center;
+                SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
+
+                SearchStatus.SearchProgress = j*TestCycles;
+
+                emit updateStatus();
+
+                QThread::msleep(500);
+
+            }
+
+
+        StatisticalData.push_back(fBest);
 }
 
+/*
+void Search::S_New1(QVector<double> Bounds, int maxEvaluations)
+{
+    double  best[PROBLEM_DIM];
+    double  fBest = std::numeric_limits<double>::max();
+    int     j = 0;
+    double  StepSize[PROBLEM_DIM];
+    double bounds[]={-0.2,0.2};
+
+
+            QDateTime cd = QDateTime::currentDateTime();
+            qsrand(cd.toTime_t());
+
+            // Initalise the Startup-Conditions
+            double variables[PROBLEM_DIM];
+
+            for(int i=0;i<PROBLEM_DIM;i++){
+                best[i] = drand(Bounds.at(i*2),Bounds.at((i*2)+1));
+                variables[i] = drand(Bounds.at(i*2),Bounds.at((i*2)+1));
+                StepSize[i]= 0.4 * (Bounds.at(i*2)-Bounds.at((i*2)+1));   // Step is 40% of bounds
+            }
+
+            DV.K[0] = variables[0];
+            DV.K[1] = variables[1];
+            DV.K[2] = variables[2];
+            DV.Center = QPoint((int)variables[3],(int)variables[4]);
+            DV.Angle = variables[5];
+
+            toro(DV.K, bounds); // Fix out of bounds conditions
+
+            //toro(variables, bounds); // Fix out of bounds conditions
+
+            while (j < maxEvaluations)
+                {
+                if(Cancel==true)
+                    return;
+                bool Improved=false;
+                for(int i = 0; i < PROBLEM_DIM-3 && j < maxEvaluations; ++i)                              // Core iteration step
+                    {
+                        fBest = LDC.getLDCError(DV);       // Get current best error
+
+
+                        //variables[i] = best[i]-StepSize[i]; // Adjust K
+                        DV.K[i] = best[i]-StepSize[i]; // Adjust K
+
+                        //toro(variables, bounds); // Fix out of bounds conditions
+                        toro(DV.K, bounds); // Fix out of bounds conditions
+
+
+//                        DV.K[0] = variables[0];
+//                        DV.K[1] = variables[1];
+//                        DV.K[2] = variables[2];
+//                        DV.Center = QPoint((int)variables[3],(int)variables[4]);
+//                        DV.Angle = variables[5];
+                        double fitness = LDC.getLDCError(DV);    // Get new fittness
+
+                        if(fitness < fBest)                                                             // If improved then save
+                        {
+                            best[i] = variables[i];
+                            Improved = true;
+                            fBest = fitness;
+                        }
+                        else                                                                            // Else test 1/2 step opposite direction
+                        {
+                            //variables[i] = best[i]+(StepSize[i]/2.0);
+                            DV.K[i] = best[i]-StepSize[i]; // Adjust K
+                            //toro(variables, bounds); // Fix out of bounds conditions
+                            toro(DV.K, bounds); // Fix out of bounds conditions
+
+//                            DV.K[0] = variables[0];
+//                            DV.K[1] = variables[1];
+//                            DV.K[2] = variables[2];
+//                            DV.Center = QPoint((int)variables[3],(int)variables[4]);
+//                            DV.Angle = variables[5];
+
+                            fitness = LDC.getLDCError(DV);
+
+                            if(fitness < fBest)                                                         // If improved save
+                            {
+//                                best[i] = variables[i];
+                                best[i] = DV.K[i];
+
+                                Improved = true;
+                                fBest = fitness;
+                            }
+                            else
+                                DV.K[i]= best[i];
+                                //variables[i]=best[i];                                                           // If no improvment in this step
+                        }                                                                               // go back to last value
+                    j++;
+                    }
+
+                    if(Improved==false)                                                                 // If no improvment in any dimension
+                        for(int i=0;i<PROBLEM_DIM;i++)                                                  // reduce all step sizes by half.
+                            StepSize[i]= StepSize[i]/2;
+
+                    SearchStatus.error.push_back(fBest);
+                    SearchStatus.K[0].push_back(DV.K[0]);
+                    SearchStatus.K[1].push_back(DV.K[1]);
+                    SearchStatus.K[2].push_back(DV.K[2]);
+
+//                    SearchStatus.error.push_back(fBest);
+//                    SearchStatus.K[0].push_back(best[0]);
+//                    SearchStatus.K[1].push_back(best[1]);
+//                    SearchStatus.K[2].push_back(best[2]);
+                    SearchStatus.Angle.push_back(best[5]);
+                    SearchStatus.Centre= QPoint((int)variables[3],(int)variables[4]);
+                    SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
+
+                    SearchStatus.SearchProgress = j*TestCycles;
+
+                    emit updateStatus();
+
+                    QThread::msleep(500);
+
+                }
+
+
+            StatisticalData.push_back(fBest);
+
+}
+*/
 //-------------------------------------------------------------------------------------------------------------
 //
 //  This function performs torroidal saturation of the vector using the bounds array
 //
 //-------------------------------------------------------------------------------------------------------------
-void Search::toro(double (&x)[PROBLEM_DIM], double bounds[])
+void Search::toro(QVector<double> &bounds)
+{
+    for(int i=0;i<PROBLEM_DIM;i++)
+    {
+      if(DV.K[0] < bounds.at(0)) DV.K[0] = bounds.at(0);
+      if(DV.K[0] > bounds.at(1)) DV.K[0] = bounds.at(1);
+      if(DV.K[1] < bounds.at(2)) DV.K[1] = bounds.at(2);
+      if(DV.K[1] > bounds.at(3)) DV.K[1] = bounds.at(3);
+      if(DV.K[2] < bounds.at(4)) DV.K[2] = bounds.at(4);
+      if(DV.K[2] > bounds.at(5)) DV.K[2] = bounds.at(5);
+//      if(x[3] < bounds.at(6)) x[3] = bounds.at(6);
+//      if(x[3] > bounds.at(7)) x[3] = bounds.at(7);
+//      if(x[4] < bounds.at(8)) x[4] = bounds.at(8);
+//      if(x[4] > bounds.at(9)) x[4] = bounds.at(9);
+//      if(x[5] < bounds.at(10)) x[5] = bounds.at(10);
+//      if(x[5] > bounds.at(11)) x[5] = bounds.at(11);
+    }
+}
+
+
+void Search::toro(double (&x)[PROBLEM_DIM-3], double bounds[])
 {
     double Xcor[5];
     double xL = bounds[0];
@@ -252,6 +570,25 @@ void Search::toro(double (&x)[PROBLEM_DIM], double bounds[])
         Xcor[i] = xL+Xcor[i]*(xU-xL);
 
         x[i] = Xcor[i];
+    }
+}
+
+void Search::toro(double (&variables)[PROBLEM_DIM]  , QVector<double> &bounds)
+{
+    for(int i=0;i<PROBLEM_DIM;i++)
+    {
+      if(variables[0] < bounds.at(0)) variables[0] = bounds.at(0);
+      if(variables[0] > bounds.at(1)) variables[0] = bounds.at(1);
+      if(variables[1] < bounds.at(2)) variables[1] = bounds.at(2);
+      if(variables[1] > bounds.at(3)) variables[1] = bounds.at(3);
+      if(variables[2] < bounds.at(4)) variables[2] = bounds.at(4);
+      if(variables[2] > bounds.at(5)) variables[2] = bounds.at(5);
+      if(variables[3] < bounds.at(6)) variables[3] = bounds.at(6);
+      if(variables[3] > bounds.at(7)) variables[3] = bounds.at(7);
+      if(variables[4] < bounds.at(8)) variables[4] = bounds.at(8);
+      if(variables[4] > bounds.at(9)) variables[4] = bounds.at(9);
+      if(variables[5] < bounds.at(10)) variables[5] = bounds.at(10);
+      if(variables[5] > bounds.at(11)) variables[5] = bounds.at(11);
     }
 }
 
@@ -284,7 +621,7 @@ bool Search::randChoice()
 #define ANGLE_MIN -5
 #define ANGLE_MAX 5
 #define CENTER_MIN -100
-#define CENTER_MAX 100
+#define CENTER_MAX +100
 #define K0_MIN -0.2
 #define K0_MAX 0.2
 #define K1_MIN -0.2
@@ -325,8 +662,8 @@ QVector <PARTICLE> SelectedParticles;
         SearchStatus.K[0].push_back(PS.particle.at(0).K[0]);
         SearchStatus.K[1].push_back(PS.particle.at(0).K[1]);
         SearchStatus.K[2].push_back(PS.particle.at(0).K[2]);
-        SearchStatus.Angle.push_back(0.15);
-        SearchStatus.Centre= QPoint(500,500);
+        SearchStatus.Angle.push_back(0.0);
+        SearchStatus.Centre= QPoint(959,539);
         SearchStatus.qsSearchStatus = "LRSearch Number: " + QString::number(j) + "    Error: " + QString::number(PS.particle[0].BestError,'f',1);
 
         LRSearchCopyParticle(0);
@@ -370,8 +707,12 @@ void Search::LRSearchInit()
         int X = (int)drand(CENTER_MIN,CENTER_MAX);
         int Y = (int)drand(CENTER_MIN,CENTER_MAX);
 
-        particle.Center.setX(X);
-        particle.Center.setY(Y);
+//        particle.Center.setX(X);
+//        particle.Center.setY(Y);
+
+        particle.Center.setX(959);
+        particle.Center.setY(539);
+
 
         particle.K[0] = drand(K0_MIN,K0_MAX);
         particle.K[1] = drand(K1_MIN,K1_MAX);

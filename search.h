@@ -13,7 +13,7 @@
 #include <statistics.h>
 
 
-#define PROBLEM_DIM 3
+#define PROBLEM_DIM 6
 
 
 struct SEARCH_STATUS
@@ -69,6 +69,8 @@ public:
      QVector <double> StatisticalData;
 
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
+    void S_New(QVector <double>,int maxEvaluations);
+
     //---------------------------------------------------------------------
     void LRSearch(void);
     void LRSearchInit(void);
@@ -81,7 +83,12 @@ public:
 
     //---------------------------------------------------------------------
     void BruteForceSearch(void);
-    void toro(double (&x)[PROBLEM_DIM], double bounds[]);
+    void toro(double (&x)[PROBLEM_DIM-3], double bounds[]);
+    void toro(double (&variables)[PROBLEM_DIM]  , QVector<double> &bounds);
+ //   void toro(double (&x)[PROBLEM_DIM-3], QVector<double> &bounds);
+    void toro(QVector<double> &bounds);
+
+
     int fix(double x);
     double drand(double lower,double upper);
     bool randChoice(void);

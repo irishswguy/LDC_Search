@@ -27,6 +27,7 @@ public:
     double getLDCError(DISTORTION_VARS &DV);
     double GetDistanceBetweenPoints(QPoint P1, QPoint P2);
     QPoint getUndistortedPoint(QPoint p,DISTORTION_VARS DV);
+    QPoint rotate_point(QPoint P, QPoint Centre,float angle);
 
     //struct DISTORTION_VARS DV;
 
