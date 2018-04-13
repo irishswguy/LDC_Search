@@ -14,7 +14,16 @@
 
 
 #define PROBLEM_DIM 6
-
+struct PARTICLE
+{
+    double K[3];
+    double Angle;
+    QPoint Center;
+    double BestError;
+    bool operator<(const PARTICLE &other) const {
+      return (BestError < other.BestError);
+    }
+};
 
 struct SEARCH_STATUS
 {
@@ -27,18 +36,16 @@ struct SEARCH_STATUS
     QVector <QString> ResultsStatus;
     int SearchProgress=0;
     int CurrentTestCycle=0;
+    QVector <PARTICLE> BestParticle;
+
+    double BestError;
+//    double BestK[3];
+//    double BestAngle;
+//    QPoint BestCentre;
+
 };
 
-struct PARTICLE
-{
-    double K[3];
-    double Angle;
-    QPoint Center;
-    double BestError;
-    bool operator<(const PARTICLE &other) const {
-      return (BestError < other.BestError);
-    }
-};
+
 
 struct PARTICLE_SEARCH
 {
@@ -66,6 +73,8 @@ public:
     bool GP_Search=false;
     int TestCycles=1;
 
+    void UpdateResults(QString Data);
+
      QVector <double> StatisticalData;
 
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
@@ -76,6 +85,7 @@ public:
     void LRSearchInit(void);
     void LRSearchCopyParticle(int p);
     void LRSearchMutate(QVector <PARTICLE> SelectedParticles);
+    void LRSearchAddParticles(int n);
 
 
 

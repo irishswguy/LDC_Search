@@ -57,16 +57,19 @@ MainWindow::~MainWindow()
 void MainWindow::PlotError()
 {
 
-    int NumberOfSamples=search->SearchStatus.error.size();
+    int NumberOfSamples=search->SearchStatus.BestParticle.size();
 
     QLineSeries *series = new QLineSeries();
     for(int i=0;i<NumberOfSamples;i++){
     //        qDebug() << search->SearchStatus.error.at(i);
-            *series << QPointF(i,search->SearchStatus.error.at(i));
+            *series << QPointF(i,search->SearchStatus.BestParticle.at(i).BestError);
+//                               error.at(i));
 
             }
     if(search->SearchStatus.error.size()>0)
-        ui->lbError->setText("Error: "+QString::number(search->SearchStatus.error.back(),'f',1));
+       // search->SearchStatus.BestParticle.back()
+        //ui->lbError->setText("Error: "+QString::number(search->SearchStatus.BestParticle.at(search->SearchStatus.BestParticle.end()).BestError,'f',1));
+          ui->lbError->setText("Error: "+QString::number(search->SearchStatus.error.back(),'f',1));
     else
         ui->lbError->setText("Error : xxx");
 
@@ -98,7 +101,7 @@ void MainWindow::PlotError()
     axisY->setTickCount(5);
     chart->addAxis(axisY, Qt::AlignLeft);
     axisY->setMax(10000.0);
-    axisY->setMin(100.0);
+    axisY->setMin(0.0);
 
     series->attachAxis(axisY);
 
@@ -109,7 +112,7 @@ void MainWindow::PlotError()
 void MainWindow::PlotConstants()
 {
 
-    int NumberOfSamples=search->SearchStatus.error.size();
+    int NumberOfSamples=search->SearchStatus.BestParticle.size();
 
     QLineSeries *K0series = new QLineSeries();
     QLineSeries *K1series = new QLineSeries();
@@ -122,10 +125,15 @@ void MainWindow::PlotConstants()
     Angleseries->setName(QString("Angle"));
 
     for(int i=0;i<NumberOfSamples;i++){
-        *K0series << QPointF(i,search->SearchStatus.K[0].at(i));
-        *K1series << QPointF(i,search->SearchStatus.K[1].at(i));
-        *K2series << QPointF(i,search->SearchStatus.K[2].at(i));
-        *Angleseries << QPointF(i,search->SearchStatus.Angle.at(i));
+//        *K0series << QPointF(i,search->SearchStatus.K[0].at(i));
+//        *K1series << QPointF(i,search->SearchStatus.K[1].at(i));
+//        *K2series << QPointF(i,search->SearchStatus.K[2].at(i));
+//        *Angleseries << QPointF(i,search->SearchStatus.Angle.at(i));
+
+        *K0series << QPointF(i,search->SearchStatus.BestParticle.at(i).K[0]);
+        *K1series << QPointF(i,search->SearchStatus.BestParticle.at(i).K[1]);
+        *K2series << QPointF(i,search->SearchStatus.BestParticle.at(i).K[2]);
+        *Angleseries << QPointF(i,search->SearchStatus.BestParticle.at(i).Angle);
         }
 
     QChart *chart = new QChart();
@@ -198,7 +206,14 @@ void MainWindow::ShowImage()
 
     paint->setPen(Qt::green);
     paint->setBrush(Qt::yellow);
-    QPoint CentrePoint(search->SearchStatus.Centre.x(),search->SearchStatus.Centre.y());
+
+ //   qSort(search->SearchStatus.BestParticle);
+
+    int psize = search->SearchStatus.BestParticle.size();
+    QPoint CentrePoint(959,539);
+    if(psize!=0)
+        CentrePoint = search->SearchStatus.BestParticle.at(psize-1).Center;
+    //QPoint CentrePoint(search->SearchStatus.Centre.x(),search->SearchStatus.Centre.y());
     paint->drawEllipse(CentrePoint,15,15);
     QString stringCentre = "( "+QString::number(CentrePoint.x())+","+QString::number(CentrePoint.y())+" )";
     QFont font = paint->font() ;

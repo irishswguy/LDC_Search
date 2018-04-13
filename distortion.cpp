@@ -51,6 +51,13 @@ QPoint Distortion::getUndistortedPoint(QPoint p,DISTORTION_VARS DV)
 {
 
     QPoint CentrePoint(DV.Center.x(),DV.Center.y());
+    //QPoint CentrePoint(959,539);
+
+    //DV.Angle=-0.3;
+    p = rotate_point(p,CentrePoint,DV.Angle);
+
+    p.setX(p.x()+(DV.Center.x() - 959));
+    p.setY(p.y()+(DV.Center.y() - 539));
 
     double radius = GetDistanceBetweenPoints(p,CentrePoint);
 
@@ -62,7 +69,9 @@ QPoint Distortion::getUndistortedPoint(QPoint p,DISTORTION_VARS DV)
     double r2 = normalized_radius * normalized_radius;
 
     temp = 1 + (DV.K[0] * r2) + (DV.K[1] * r2 *r2) + (DV.K[2] *r2*r2*r2*r2)+(DV.K[3] *r2*r2*r2*r2*r2*r2*r2*r2);
-
+    //temp = 1 + (DV.K[0] * r2) + (DV.K[1] * r2 *r2);
+    //temp = 1 + (DV.K[0] * r2);
+    //temp = 1;
     x_corrected = CentrePoint.x() + ( (p.x() - CentrePoint.x()) * temp);
     y_corrected = CentrePoint.y() + ( (p.y() - CentrePoint.y()) * temp);
 
@@ -70,8 +79,6 @@ QPoint Distortion::getUndistortedPoint(QPoint p,DISTORTION_VARS DV)
 
     UndistortedPoint.setX(x_corrected);
     UndistortedPoint.setY(y_corrected);
-
-    UndistortedPoint = rotate_point(UndistortedPoint,CentrePoint,DV.Angle);
 
     return UndistortedPoint;
 }

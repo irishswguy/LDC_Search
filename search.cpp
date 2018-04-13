@@ -19,7 +19,17 @@ void Search::Start()
     SearchStatus.qsSearchStatus = "";
     SearchStatus.SearchProgress=0;
 
+
+
     Cancel = false;
+}
+
+void Search::UpdateResults(QString Data)
+{
+    SearchStatus.ResultsStatus.push_back(Data);
+    emit updateStatus();
+    QThread::msleep(500);
+     SearchStatus.ResultsStatus.clear();
 }
 
 void Search::process() {
@@ -27,10 +37,24 @@ void Search::process() {
     qDebug() << "Search Process Started";
 
     SearchStatus.ResultsStatus.clear();
+    SearchStatus.BestParticle.clear();
 
 
-    if( LR_Search == true)
-            LRSearch();
+    if( LR_Search == true){
+        UpdateResults("Starting LR-Search Algrothim \n------------------------------------------\n");
+
+            StatisticalData.clear();
+            SearchStatus.BestError=std::numeric_limits<double>::max();
+
+            for(int i=0;i<TestCycles;i++){
+                Start();
+                SearchStatus.BestParticle.clear();
+                SearchStatus.CurrentTestCycle=i;
+                LRSearch();
+                UpdateResults("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.back(),'f',2));
+            }
+
+    }
 
     if(S_Search==true){
         double bounds[]={-0.2,0.2};
@@ -41,54 +65,28 @@ void Search::process() {
         Bounds.push_back(0.2);
         Bounds.push_back(-0.2);     // K[2]
         Bounds.push_back(0.2);
-        Bounds.push_back(959-10);     // X-Offset
-        Bounds.push_back(959+10);
-        Bounds.push_back(539-10);     // Y-Offset
-        Bounds.push_back(539+10);
+        Bounds.push_back(-20);     // X-Offset
+        Bounds.push_back(+20);
+        Bounds.push_back(-20);     // Y-Offset
+        Bounds.push_back(+20);
         Bounds.push_back(-10);      // Angle
         Bounds.push_back(10);
 
-        SearchStatus.ResultsStatus.push_back("Starting S-Search Algrothim");
-        SearchStatus.ResultsStatus.push_back("------------------------------------------");
-        emit updateStatus();
-
-        QThread::msleep(500);
-        SearchStatus.ResultsStatus.clear();
+        UpdateResults("Starting S-Search Algrothim \n------------------------------------------\n");
+        StatisticalData.clear();
 
         for(int i=0;i<TestCycles;i++){
             Start();
+            SearchStatus.BestParticle.clear();
             SearchStatus.CurrentTestCycle=i;;
+            S_New(Bounds,500);
+            UpdateResults("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.back(),'f',2));
+//            SearchStatus.ResultsStatus.push_back("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.back(),'f',2));
+//            emit updateStatus();
+//            QThread::msleep(500);
+//            SearchStatus.ResultsStatus.clear();
 
-           // S(bounds,250);
-            S_New(Bounds,1000);
-
-
-            SearchStatus.ResultsStatus.push_back("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.at(i),'f',2));
-            emit updateStatus();
-            QThread::msleep(500);
-            SearchStatus.ResultsStatus.clear();
-            emit finished();
             }
-        double Mean = statistics.getMean(StatisticalData);
-        double StdDev = statistics.getStdDeviation(StatisticalData,Mean);
-
-        SearchStatus.ResultsStatus.push_back("---------Best Results-------");
-        SearchStatus.ResultsStatus.push_back("  K0 :"+QString::number(DV.K[0]));
-        SearchStatus.ResultsStatus.push_back("  K1 :"+QString::number(DV.K[1]));
-        SearchStatus.ResultsStatus.push_back("  K2 :"+QString::number(DV.K[2]));
-        SearchStatus.ResultsStatus.push_back("  Angle :"+QString::number(DV.Angle));
-
-        QString CentreString = "  Centre : "
-                +QString::number(DV.Center.x())+
-                                 ","+QString::number(DV.Center.y()) ;
-
-        SearchStatus.ResultsStatus.push_back(CentreString);
-        SearchStatus.ResultsStatus.push_back(" ");
-        SearchStatus.ResultsStatus.push_back("Mean   : " + QString::number(Mean,'f',1));
-        SearchStatus.ResultsStatus.push_back("StdDev : " + QString::number(StdDev,'f',1));
-        SearchStatus.ResultsStatus.push_back(" ");
-        SearchStatus.Finished=true;
-        emit updateStatus();
 
         }
 
@@ -96,6 +94,54 @@ void Search::process() {
         {
         qDebug() << "To Be Done....";
         }
+
+    QVector <PARTICLE> tempParticle;
+
+    tempParticle=SearchStatus.BestParticle;
+
+    qSort(tempParticle);
+    double Mean = statistics.getMean(StatisticalData);
+    double StdDev = statistics.getStdDeviation(StatisticalData,Mean);
+
+    QString Result = "\n---------Best Results-------" +
+    QString("\n  Best Error :")+
+    QString::number(tempParticle.at(0).BestError)+
+    QString("\n  K1 :")+QString::number(tempParticle.at(0).K[0])+
+    QString("\n  K1 :")+QString::number(tempParticle.at(0).K[1])+
+    QString("\n  K2 :")+QString::number(tempParticle.at(0).K[2])+
+    QString("\n  Angle :")+QString::number(tempParticle.at(0).Angle,'f',2)+
+    QString("\n  Centre : ") +QString::number(tempParticle.at(0).Center.x())+","+QString::number(tempParticle.at(0).Center.y())+
+    QString("\n ")+
+    QString("\nMean   : ") + QString::number(Mean,'f',1)+
+    QString("\nStdDev : ") + QString::number(StdDev,'f',1)+
+    QString("\n ");
+    SearchStatus.Finished=true;
+    UpdateResults(Result);
+
+
+//    SearchStatus.ResultsStatus.push_back("---------Best Results-------");
+//    SearchStatus.ResultsStatus.push_back("  Best Error :"+QString::number(tempParticle.at(0).BestError));
+//    SearchStatus.ResultsStatus.push_back("  K1 :"+QString::number(tempParticle.at(0).K[0]));
+//    SearchStatus.ResultsStatus.push_back("  K1 :"+QString::number(tempParticle.at(0).K[1]));
+//    SearchStatus.ResultsStatus.push_back("  K2 :"+QString::number(tempParticle.at(0).K[2]));
+//    SearchStatus.ResultsStatus.push_back("  Angle :"+QString::number(tempParticle.at(0).Angle,'f',2));
+
+//    QString CentreString = "  Centre : "
+//            +QString::number(tempParticle.at(0).Center.x())+
+//                             ","+QString::number(tempParticle.at(0).Center.y()) ;
+//    SearchStatus.ResultsStatus.push_back(CentreString);
+
+//    double Mean = statistics.getMean(StatisticalData);
+//    double StdDev = statistics.getStdDeviation(StatisticalData,Mean);
+//    SearchStatus.ResultsStatus.push_back(" ");
+//    SearchStatus.ResultsStatus.push_back("Mean   : " + QString::number(Mean,'f',1));
+//    SearchStatus.ResultsStatus.push_back("StdDev : " + QString::number(StdDev,'f',1));
+//    SearchStatus.ResultsStatus.push_back(" ");
+
+//    SearchStatus.Finished=true;
+//    emit updateStatus();
+
+    emit finished();
 
 
     return;
@@ -148,116 +194,6 @@ void Search::BruteForceSearch(void)
 //    //qDebug() << "Brute Force Search - Search Time:" << ElapsedTime.elapsed()/1000 << "Seconds";
 }
 
-//-------------------------------------------------------------------------------------------------------------
-//
-//  This function performs a search for the best constants K1 and K2.
-//
-//  The Reference pixel positions are held in the vector 'reference'.
-//
-//  The Distorted pixel positions are keld in the vector 'distorted'.
-//
-//  The Function LDC.getLDCError()  calculates the absolute difference
-//  between the 'refernece' pixels and the transformed ( by k1 & k2 )
-//  'distorted' pixels.
-//
-//  Results from the run are stored in the 'StatisticalData' vector.
-//
-//-------------------------------------------------------------------------------------------------------------
-void Search::S(double bounds[PROBLEM_DIM],int maxEvaluations)
-{
-double  best[PROBLEM_DIM];
-double  fBest = std::numeric_limits<double>::max();
-int     j = 0;
-double  StepSize[PROBLEM_DIM];
-
-
-        QDateTime cd = QDateTime::currentDateTime();
-        qsrand(cd.toTime_t());
-
-        // Initalise the Startup-Conditions
-        for(int i=0;i<PROBLEM_DIM;i++){
-            best[i] = drand(bounds[0],bounds[1]);
-            StepSize[i]= 0.04 * (bounds[1]-bounds[0]);   // Step is 40% of bounds
-            }
-
-
-        DV.K[0] = drand(-0.2,0.2);
-        DV.K[1] = drand(-0.2,0.2);
-        DV.K[2] = drand(-0.2,0.2);
-        DV.Center = QPoint(959,539);
-        DV.Angle = 0;
-
-        int deltaX=(int)drand(-100,100);
-        int deltaY=(int)drand(-100,100);
-        int deltaXStepSize=80;
-        int deltaYStepSize=80;
-
-        //toro(DV.K, bounds); // Fix out of bounds conditions
-
-        while (j < maxEvaluations)
-            {
-            if(Cancel==true)
-                return;
-            bool Improved=false;
-            for(int i = 0; i < PROBLEM_DIM && j < maxEvaluations; ++i)                              // Core iteration step
-                {
-                    fBest = LDC.getLDCError(DV);       // Get current best error
-
-                    deltaX = deltaX - deltaXStepSize;
-                    deltaY = deltaX - deltaXStepSize;
-
-                    DV.K[i] = best[i]-StepSize[i];                                                     // Adjust K
-                  //  toro(DV.K, bounds);
-
-                    double fitness = LDC.getLDCError(DV);    // Get new fittness
-
-                    if(fitness < fBest)                                                             // If improved then save
-                    {
-                        best[i] = DV.K[i];
-                        Improved = true;
-                        fBest = fitness;
-                    }
-                    else                                                                            // Else test 1/2 step opposite direction
-                    {
-                        DV.K[i] = best[i]+(StepSize[i]/1.0);
-                        //toro(DV.K, bounds);
-                        fitness = LDC.getLDCError(DV);
-
-                        if(fitness < fBest)                                                         // If improved save
-                        {
-                            best[i] = DV.K[i];
-                            Improved = true;
-                            fBest = fitness;
-                        }
-                        else
-                            DV.K[i]=best[i];                                                           // If no improvment in this step
-                    }                                                                               // go back to last value
-                j++;
-                }
-
-                if(Improved==false)                                                                 // If no improvment in any dimension
-                    for(int i=0;i<PROBLEM_DIM;i++)                                                  // reduce all step sizes by half.
-                        StepSize[i]= StepSize[i]/1.1;
-
-                SearchStatus.error.push_back(fBest);
-                SearchStatus.K[0].push_back(DV.K[0]);
-                SearchStatus.K[1].push_back(DV.K[1]);
-                SearchStatus.K[2].push_back(DV.K[2]);
-                SearchStatus.Angle.push_back(0.15);
-                SearchStatus.Centre= QPoint(500,500);
-                SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
-
-                SearchStatus.SearchProgress = j*TestCycles;
-
-                emit updateStatus();
-
-                QThread::msleep(500);
-
-            }
-
-
-        StatisticalData.push_back(fBest);
-}
 void Search::S_New(QVector<double> Bounds,int maxEvaluations)
 {
 double  best[PROBLEM_DIM];
@@ -271,20 +207,18 @@ double  StepSize[PROBLEM_DIM];
 
         // Initalise the Startup-Conditions
         for(int i=0;i<PROBLEM_DIM;i++){
-//            best[i] = drand(Bounds.at(0),Bounds.at(1));
-//            StepSize[i]= 0.04 * (Bounds.at(1)-Bounds.at(0));   // Step is 40% of bounds
-
             best[i] = drand(Bounds.at(i*2),Bounds.at((i*2)+1));
             StepSize[i]= 0.04 * (Bounds.at(i*2)-Bounds.at((i*2)+1));   // Step is 40% of bounds
             }
 
+        best[3]=959;
+        best[4]=539;
 
         DV.K[0] = drand(-0.2,0.2);
         DV.K[1] = drand(-0.2,0.2);
         DV.K[2] = drand(-0.2,0.2);
         DV.Center = QPoint(959,539);
         DV.Angle = 0;
-
 
         toro(Bounds); // Fix out of bounds conditions
 
@@ -370,8 +304,9 @@ double  StepSize[PROBLEM_DIM];
                     }                                                                               // go back to last value
                 j++;
                 }
-
-                if(Improved==false)                                                                 // If no improvment in any dimension
+                // If no improvment in any dimension
+                // reduce all step sizes.
+                if(Improved==false)
                     for(int i=0;i<PROBLEM_DIM;i++)
                         switch(i)
                         {
@@ -382,151 +317,28 @@ double  StepSize[PROBLEM_DIM];
                         case 4 : StepSize[i]= StepSize[i]/2; break;
                         case 5 : StepSize[i]= StepSize[i]/2; break;
                         }
-                        // reduce all step sizes by half.
-                        //StepSize[i]= StepSize[i]/1.1;
-
-                SearchStatus.error.push_back(fBest);
-                SearchStatus.K[0].push_back(DV.K[0]);
-                SearchStatus.K[1].push_back(DV.K[1]);
-                SearchStatus.K[2].push_back(DV.K[2]);
-                SearchStatus.Angle.push_back(DV.Angle);
-                SearchStatus.Centre= DV.Center;
-                SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
-
-                SearchStatus.SearchProgress = j*TestCycles;
-
-                emit updateStatus();
-
-                QThread::msleep(500);
-
-            }
 
 
-        StatisticalData.push_back(fBest);
+            SearchStatus.BestError = fBest; //PS.particle[0].BestError;
+            PARTICLE PV;
+            PV.Angle = DV.Angle;
+            PV.BestError=fBest;
+            PV.Center = DV.Center;
+            PV.K[0] = DV.K[0];
+            PV.K[1] = DV.K[1];
+            PV.K[2] = DV.K[2];
+            SearchStatus.BestParticle.push_back(PV);
+
+            SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
+
+            SearchStatus.SearchProgress = j*TestCycles;
+
+            emit updateStatus();
+            QThread::msleep(500);
+        }
+        StatisticalData.push_back(SearchStatus.BestError);
 }
 
-/*
-void Search::S_New1(QVector<double> Bounds, int maxEvaluations)
-{
-    double  best[PROBLEM_DIM];
-    double  fBest = std::numeric_limits<double>::max();
-    int     j = 0;
-    double  StepSize[PROBLEM_DIM];
-    double bounds[]={-0.2,0.2};
-
-
-            QDateTime cd = QDateTime::currentDateTime();
-            qsrand(cd.toTime_t());
-
-            // Initalise the Startup-Conditions
-            double variables[PROBLEM_DIM];
-
-            for(int i=0;i<PROBLEM_DIM;i++){
-                best[i] = drand(Bounds.at(i*2),Bounds.at((i*2)+1));
-                variables[i] = drand(Bounds.at(i*2),Bounds.at((i*2)+1));
-                StepSize[i]= 0.4 * (Bounds.at(i*2)-Bounds.at((i*2)+1));   // Step is 40% of bounds
-            }
-
-            DV.K[0] = variables[0];
-            DV.K[1] = variables[1];
-            DV.K[2] = variables[2];
-            DV.Center = QPoint((int)variables[3],(int)variables[4]);
-            DV.Angle = variables[5];
-
-            toro(DV.K, bounds); // Fix out of bounds conditions
-
-            //toro(variables, bounds); // Fix out of bounds conditions
-
-            while (j < maxEvaluations)
-                {
-                if(Cancel==true)
-                    return;
-                bool Improved=false;
-                for(int i = 0; i < PROBLEM_DIM-3 && j < maxEvaluations; ++i)                              // Core iteration step
-                    {
-                        fBest = LDC.getLDCError(DV);       // Get current best error
-
-
-                        //variables[i] = best[i]-StepSize[i]; // Adjust K
-                        DV.K[i] = best[i]-StepSize[i]; // Adjust K
-
-                        //toro(variables, bounds); // Fix out of bounds conditions
-                        toro(DV.K, bounds); // Fix out of bounds conditions
-
-
-//                        DV.K[0] = variables[0];
-//                        DV.K[1] = variables[1];
-//                        DV.K[2] = variables[2];
-//                        DV.Center = QPoint((int)variables[3],(int)variables[4]);
-//                        DV.Angle = variables[5];
-                        double fitness = LDC.getLDCError(DV);    // Get new fittness
-
-                        if(fitness < fBest)                                                             // If improved then save
-                        {
-                            best[i] = variables[i];
-                            Improved = true;
-                            fBest = fitness;
-                        }
-                        else                                                                            // Else test 1/2 step opposite direction
-                        {
-                            //variables[i] = best[i]+(StepSize[i]/2.0);
-                            DV.K[i] = best[i]-StepSize[i]; // Adjust K
-                            //toro(variables, bounds); // Fix out of bounds conditions
-                            toro(DV.K, bounds); // Fix out of bounds conditions
-
-//                            DV.K[0] = variables[0];
-//                            DV.K[1] = variables[1];
-//                            DV.K[2] = variables[2];
-//                            DV.Center = QPoint((int)variables[3],(int)variables[4]);
-//                            DV.Angle = variables[5];
-
-                            fitness = LDC.getLDCError(DV);
-
-                            if(fitness < fBest)                                                         // If improved save
-                            {
-//                                best[i] = variables[i];
-                                best[i] = DV.K[i];
-
-                                Improved = true;
-                                fBest = fitness;
-                            }
-                            else
-                                DV.K[i]= best[i];
-                                //variables[i]=best[i];                                                           // If no improvment in this step
-                        }                                                                               // go back to last value
-                    j++;
-                    }
-
-                    if(Improved==false)                                                                 // If no improvment in any dimension
-                        for(int i=0;i<PROBLEM_DIM;i++)                                                  // reduce all step sizes by half.
-                            StepSize[i]= StepSize[i]/2;
-
-                    SearchStatus.error.push_back(fBest);
-                    SearchStatus.K[0].push_back(DV.K[0]);
-                    SearchStatus.K[1].push_back(DV.K[1]);
-                    SearchStatus.K[2].push_back(DV.K[2]);
-
-//                    SearchStatus.error.push_back(fBest);
-//                    SearchStatus.K[0].push_back(best[0]);
-//                    SearchStatus.K[1].push_back(best[1]);
-//                    SearchStatus.K[2].push_back(best[2]);
-                    SearchStatus.Angle.push_back(best[5]);
-                    SearchStatus.Centre= QPoint((int)variables[3],(int)variables[4]);
-                    SearchStatus.qsSearchStatus = "S-Search, Cycle :" + QString::number(SearchStatus.CurrentTestCycle) +" Loop :" + QString::number(j);
-
-                    SearchStatus.SearchProgress = j*TestCycles;
-
-                    emit updateStatus();
-
-                    QThread::msleep(500);
-
-                }
-
-
-            StatisticalData.push_back(fBest);
-
-}
-*/
 //-------------------------------------------------------------------------------------------------------------
 //
 //  This function performs torroidal saturation of the vector using the bounds array
@@ -617,11 +429,14 @@ bool Search::randChoice()
     return false;
 }
 
-#define MAX_PARTICLES 1000
-#define ANGLE_MIN -5
-#define ANGLE_MAX 5
-#define CENTER_MIN -100
-#define CENTER_MAX +100
+#define MAX_PARTICLES 10000
+#define ANGLE_MIN -1
+#define ANGLE_MAX 1
+#define X_CENTER_MIN 934
+#define X_CENTER_MAX 984
+#define Y_CENTER_MIN 514
+#define Y_CENTER_MAX 563
+
 #define K0_MIN -0.2
 #define K0_MAX 0.2
 #define K1_MIN -0.2
@@ -630,6 +445,8 @@ bool Search::randChoice()
 #define K2_MAX 0.2
 #define QTY_SELECTED_PARICLES 200
 #define RANDOMNESS 10
+#define K_RANDOMNESS 20
+
 
 void Search::LRSearch(void)
 {
@@ -639,7 +456,7 @@ QVector <PARTICLE> SelectedParticles;
     // Randomly Initalise All the Particles
     LRSearchInit();
 
-    for(int j=0;j<5;j++)
+    for(int j=0;j<10;j++)
     {
         // Test the particles
         for(int i=0;i<PS.particle.size();i++)
@@ -653,18 +470,13 @@ QVector <PARTICLE> SelectedParticles;
         // Sort the Particles - lowest errors first
         qSort(PS.particle);
 
-        qDebug() << "j: " << j << " BestError : "<< PS.particle[0].BestError;
-        qDebug() << "K[0]: " << PS.particle.at(0).K[0];
-        qDebug() << "K[1]: " << PS.particle.at(0).K[1];
-        qDebug() << "K[2]: " << PS.particle.at(0).K[2];
+        if(PS.particle[0].BestError < SearchStatus.BestError)
+        {
+            SearchStatus.BestError = PS.particle[0].BestError;
+        }
+        SearchStatus.BestParticle.push_back(PS.particle[0]);
 
-        SearchStatus.error.push_back(PS.particle[0].BestError);
-        SearchStatus.K[0].push_back(PS.particle.at(0).K[0]);
-        SearchStatus.K[1].push_back(PS.particle.at(0).K[1]);
-        SearchStatus.K[2].push_back(PS.particle.at(0).K[2]);
-        SearchStatus.Angle.push_back(0.0);
-        SearchStatus.Centre= QPoint(959,539);
-        SearchStatus.qsSearchStatus = "LRSearch Number: " + QString::number(j) + "    Error: " + QString::number(PS.particle[0].BestError,'f',1);
+        SearchStatus.qsSearchStatus = "LRSearch Number: " + QString::number(j) + "    Error: " + QString::number(SearchStatus.BestError,'f',1);
 
         LRSearchCopyParticle(0);
         LDC.getLDCError(DV);
@@ -672,7 +484,7 @@ QVector <PARTICLE> SelectedParticles;
         emit updateStatus();
         QThread::msleep(500);
 
-
+        SelectedParticles.clear();
         // Select Particles for mutation
         for(int i=0;i<QTY_SELECTED_PARICLES;i++)
             SelectedParticles.push_back(PS.particle.at(i));
@@ -680,15 +492,10 @@ QVector <PARTICLE> SelectedParticles;
         PS.particle.clear();
 
         // Perform Mutation of selected particles
-
         LRSearchMutate(SelectedParticles);
+        LRSearchAddParticles(250);
     }
-
-
-
-
-
-
+    StatisticalData.push_back(SearchStatus.BestError);
 
 }
 
@@ -697,6 +504,9 @@ void Search::LRSearchInit()
     QDateTime cd = QDateTime::currentDateTime();
     qsrand(cd.toTime_t());
 
+    PS.particle.clear();
+    SearchStatus.BestError=std::numeric_limits<double>::max();
+
     // Initalise the particles
     for(int i=0;i<MAX_PARTICLES;i++)
     {
@@ -704,14 +514,47 @@ void Search::LRSearchInit()
         particle.BestError = std::numeric_limits<double>::max();
         particle.Angle = drand(ANGLE_MIN,ANGLE_MAX);
 
-        int X = (int)drand(CENTER_MIN,CENTER_MAX);
-        int Y = (int)drand(CENTER_MIN,CENTER_MAX);
+        qDebug() << "Particle Angle : " << particle.Angle;
 
-//        particle.Center.setX(X);
-//        particle.Center.setY(Y);
+        int X = (int)drand(X_CENTER_MIN,X_CENTER_MAX);
+        int Y = (int)drand(Y_CENTER_MIN,Y_CENTER_MAX);
 
-        particle.Center.setX(959);
-        particle.Center.setY(539);
+        particle.Center.setX(X);
+        particle.Center.setY(Y);
+
+//        particle.Center.setX(959);
+//        particle.Center.setY(539);
+
+
+        particle.K[0] = drand(K0_MIN,K0_MAX);
+        particle.K[1] = drand(K1_MIN,K1_MAX);
+        particle.K[2] = drand(K2_MIN,K2_MAX);
+
+        PS.particle.push_back(particle);
+    }
+}
+
+void Search::LRSearchAddParticles(int n)
+{
+    QDateTime cd = QDateTime::currentDateTime();
+    qsrand(cd.toTime_t());
+
+
+    // Initalise the particles
+    for(int i=0;i<n;i++)
+    {
+        PARTICLE particle;
+        particle.BestError = std::numeric_limits<double>::max();
+        particle.Angle = drand(ANGLE_MIN,ANGLE_MAX);
+
+        int X = (int)drand(X_CENTER_MIN,X_CENTER_MAX);
+        int Y = (int)drand(Y_CENTER_MIN,Y_CENTER_MAX);
+
+        particle.Center.setX(X);
+        particle.Center.setY(Y);
+
+//        particle.Center.setX(959);
+//        particle.Center.setY(539);
 
 
         particle.K[0] = drand(K0_MIN,K0_MAX);
@@ -746,36 +589,36 @@ void Search::LRSearchMutate(QVector<PARTICLE> SelectedParticles)
             else
                 particle.Angle = SelectedParticles.at(pp).Angle + drand(ANGLE_MIN/10,ANGLE_MAX/10);
 
-            int X = (int)drand(CENTER_MIN,CENTER_MAX);
-            int Y = (int)drand(CENTER_MIN,CENTER_MAX);
+            int X = (int)drand(X_CENTER_MIN+20,X_CENTER_MAX-20);
+            int Y = (int)drand(X_CENTER_MIN+20,X_CENTER_MAX-20);
 
             if(randChoice()==true)
-                X = SelectedParticles.at(cp).Center.x() + drand(CENTER_MIN/10,CENTER_MAX/10);
+                X = SelectedParticles.at(cp).Center.x() + 959-(int)drand(X_CENTER_MIN+20,X_CENTER_MAX-20);
             else
-                X = SelectedParticles.at(pp).Center.x() + drand(CENTER_MIN/10,CENTER_MAX/10);
+                X = SelectedParticles.at(pp).Center.x() + 959-(int)drand(X_CENTER_MIN+20,X_CENTER_MAX-20);
 
             if(randChoice()==true)
-                Y = SelectedParticles.at(cp).Center.y() + drand(CENTER_MIN/10,CENTER_MAX/10);
+                Y = SelectedParticles.at(cp).Center.y() + 539-(int)drand(Y_CENTER_MIN+20,Y_CENTER_MAX-20);
             else
-                Y = SelectedParticles.at(pp).Center.y() + drand(CENTER_MIN/10,CENTER_MAX/10);
+                Y = SelectedParticles.at(pp).Center.y() + 539-(int)drand(Y_CENTER_MIN+20,Y_CENTER_MAX-20);
 
             particle.Center.setX(X);
             particle.Center.setY(Y);
 
             if(randChoice()==true)
-                particle.K[0] = SelectedParticles.at(cp).K[0] + drand(K0_MIN/10,K0_MAX/10);
+                particle.K[0] = SelectedParticles.at(cp).K[0] + drand(K0_MIN/K_RANDOMNESS,K0_MAX/K_RANDOMNESS);
             else
-                particle.K[0] = SelectedParticles.at(pp).K[0] + drand(K0_MIN/10,K0_MAX/10);
+                particle.K[0] = SelectedParticles.at(pp).K[0] + drand(K0_MIN/K_RANDOMNESS,K0_MAX/K_RANDOMNESS);
 
             if(randChoice()==true)
-                particle.K[1] = SelectedParticles.at(cp).K[1] + drand(K0_MIN/10,K0_MAX/10);
+                particle.K[1] = SelectedParticles.at(cp).K[1] + drand(K0_MIN/K_RANDOMNESS,K0_MAX/K_RANDOMNESS);
             else
-                particle.K[1] = SelectedParticles.at(pp).K[1] + drand(K0_MIN/10,K0_MAX/10);
+                particle.K[1] = SelectedParticles.at(pp).K[1] + drand(K0_MIN/K_RANDOMNESS,K0_MAX/K_RANDOMNESS);
 
             if(randChoice()==true)
-                particle.K[2] = SelectedParticles.at(cp).K[2] + drand(K0_MIN/10,K0_MAX/10);
+                particle.K[2] = SelectedParticles.at(cp).K[2] + drand(K0_MIN/K_RANDOMNESS,K0_MAX/K_RANDOMNESS);
             else
-                particle.K[2] = SelectedParticles.at(pp).K[2] + drand(K0_MIN/10,K0_MAX/10);
+                particle.K[2] = SelectedParticles.at(pp).K[2] + drand(K0_MIN/K_RANDOMNESS,K0_MAX/K_RANDOMNESS);
 
 
             PS.particle.push_back(particle);
