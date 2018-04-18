@@ -92,7 +92,7 @@ void Search::process() {
 
     if(GP_Search==true)
         {
-        qDebug() << "To Be Done....";
+        PSO(500);
         }
 
     QVector <PARTICLE> tempParticle;
@@ -338,6 +338,7 @@ double  StepSize[PROBLEM_DIM];
         }
         StatisticalData.push_back(SearchStatus.BestError);
 }
+
 
 //-------------------------------------------------------------------------------------------------------------
 //
@@ -623,6 +624,161 @@ void Search::LRSearchMutate(QVector<PARTICLE> SelectedParticles)
 
             PS.particle.push_back(particle);
         }
+
+}
+/*
+struct PSO_PARTICLE
+{
+    double K[3];
+    double Angle;
+    QPoint Center;
+    double BestError;
+    double theta2;
+    double theta3;
+    double V;
+    bool operator<(const PARTICLE &other) const {
+      return (BestError < other.BestError);
+    }
+};
+
+struct PSO_GLOBAL
+{
+    QVector <PSO_PARTICLE> P;
+    double theta1;
+    double BestError;
+}pso;
+*/
+#define PSO_PARTICLES 2000
+#define V_MAX 0.9
+#define V_MIN -0.9
+#define T1_MIN 0
+#define T1_MAX +0.9
+#define T2_MIN 0.0
+#define T2_MAX +0.0001
+#define T3_MIN 0
+#define T3_MAX +0.0001
+
+
+/*
+#define ANGLE_MIN -1
+#define ANGLE_MAX 1
+#define X_CENTER_MIN 934
+#define X_CENTER_MAX 984
+#define Y_CENTER_MIN 514
+#define Y_CENTER_MAX 563
+
+#define K0_MIN -0.2
+#define K0_MAX 0.2
+#define K1_MIN -0.2
+#define K1_MAX 0.2
+#define K2_MIN -0.2
+#define K2_MAX 0.2
+*/
+
+void Search::PSO(int maxEvaluations)
+{
+        QDateTime cd = QDateTime::currentDateTime();
+        qsrand(cd.toTime_t());
+
+        PSOInit();
+
+        PSO_PARTICLE pP;
+
+        for(int i=0;i<pso.P.size();i++)
+        {
+        pP = PSOPerturb(pso.P.at(i));
+        double Error = PSOFunction(pP);
+        if(Error < pso.P.at(i).BestError)
+            {
+            pso.P[i] = pP;
+            pso.P[i].BestError = Error;
+            if(Error < pso.BestError)
+                pso.BestError = Error;
+            }
+        }
+
+
+
+
+}
+
+void Search::PSOInit()
+{
+    pso.BestError = std::numeric_limits<double>::max();
+    pso.theta1 = drand(T1_MIN,T1_MAX);
+
+    for(int i=0;i<PSO_PARTICLES;i++)
+    {
+        PSO_PARTICLE P;
+        P.Angle = drand(ANGLE_MIN,ANGLE_MAX);
+        int X = (int)drand(X_CENTER_MIN,X_CENTER_MAX);
+        int Y = (int)drand(Y_CENTER_MIN,Y_CENTER_MAX);
+        P.Center.setX(X);
+        P.Center.setY(Y);
+        P.K[0] = drand(K0_MIN,K0_MAX);
+        P.K[1] = drand(K1_MIN,K1_MAX);
+        P.K[2] = drand(K2_MIN,K2_MAX);
+        P.V = drand(V_MIN,V_MAX);
+        P.theta2 = drand(T2_MIN,T2_MAX);
+        P.theta3 = drand(T3_MIN,T3_MAX);
+        P.BestError = std::numeric_limits<double>::max();
+
+        P.BestError = PSOFunction(P);
+        if(P.BestError < pso.BestError)
+            pso.BestError = P.BestError;
+
+        pso.P.push_back(P);
+    }
+
+    qDebug() << "PSO Init Done....";
+
+}
+
+double Search::PSOFunction(int Particle)
+{
+    DV.Angle = pso.P.at(Particle).Angle;
+    DV.K[0] = pso.P.at(Particle).K[0];
+    DV.K[1] = pso.P.at(Particle).K[1];
+    DV.K[2] = pso.P.at(Particle).K[2];
+    DV.Center = pso.P.at(Particle).Center;
+
+    double Error = LDC.getLDCError(DV);
+
+    return Error;
+}
+
+double Search::PSOFunction(PSO_PARTICLE Particle)
+{
+    DV.Angle   = Particle.Angle;
+    DV.K[0]   = Particle.K[0];
+    DV.K[1]   = Particle.K[1];
+    DV.K[2]   = Particle.K[2];
+    DV.Center = Particle.Center;
+
+    double Error = LDC.getLDCError(DV);
+
+    return Error;
+}
+
+PSO_PARTICLE Search::PSOPerturb(PSO_PARTICLE P)
+{
+    PSO_PARTICLE pP;
+
+    double CurrentError = PSOFunction(P);
+
+    double NewVelocity = pso.theta1*P.V+ P.theta2*(P.BestError-CurrentError) +P.theta3*(pso.BestError-CurrentError);
+
+    pP.Angle = P.Angle + NewVelocity*(ANGLE_MAX-ANGLE_MIN);
+    pP.K[0] = P.K[0]   + NewVelocity*(K0_MAX-K0_MIN);
+    pP.K[1] = P.K[1]   + NewVelocity*(K1_MAX-K1_MIN);
+    pP.K[2] = P.K[2]   + NewVelocity*(K1_MAX-K1_MIN);
+    int dX = (int)(NewVelocity*(+34+34));
+    int dY = (int)(NewVelocity*(+34+34));
+
+    pP.Center.setX(pP.Center.x()+dX);
+    pP.Center.setY(pP.Center.y()+dY);
+
+    return pP;
 
 }
 

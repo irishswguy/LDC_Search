@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <statistics.h>
 
-
 #define PROBLEM_DIM 6
 struct PARTICLE
 {
@@ -23,6 +22,26 @@ struct PARTICLE
     bool operator<(const PARTICLE &other) const {
       return (BestError < other.BestError);
     }
+};
+struct PSO_PARTICLE
+{
+    double K[3];
+    double Angle;
+    QPoint Center;
+    double BestError;
+    double theta2;
+    double theta3;
+    double V;
+    bool operator<(const PARTICLE &other) const {
+      return (BestError < other.BestError);
+    }
+};
+
+struct PSO_GLOBAL
+{
+    QVector <PSO_PARTICLE> P;
+    double theta1;
+    double BestError;
 };
 
 struct SEARCH_STATUS
@@ -79,6 +98,17 @@ public:
 
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
     void S_New(QVector <double>,int maxEvaluations);
+
+    // --------------------------------------------------------------------
+    struct PSO_GLOBAL pso;
+    void PSO(int maxEvaluations);
+    void PSOInit(void);
+    double PSOFunction(int Particle);
+    double PSOFunction(PSO_PARTICLE Particle);
+    PSO_PARTICLE PSOPerturb(PSO_PARTICLE );
+
+
+
 
     //---------------------------------------------------------------------
     void LRSearch(void);
