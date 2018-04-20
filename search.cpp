@@ -19,8 +19,6 @@ void Search::Start()
     SearchStatus.qsSearchStatus = "";
     SearchStatus.SearchProgress=0;
 
-
-
     Cancel = false;
 }
 
@@ -92,7 +90,18 @@ void Search::process() {
 
     if(GP_Search==true)
         {
-        PSO(500);
+        UpdateResults("Starting EV-Search Algrothim \n------------------------------------------\n");
+
+            StatisticalData.clear();
+            SearchStatus.BestError=std::numeric_limits<double>::max();
+            for(int i=0;i<TestCycles;i++){
+                Start();
+                SearchStatus.BestParticle.clear();
+                SearchStatus.CurrentTestCycle=i;
+                EV_Search(50);
+                UpdateResults("Test Cycle : "+QString::number(i+1)+" Error : " + QString::number(StatisticalData.back(),'f',2));
+            }
+
         }
 
     QVector <PARTICLE> tempParticle;
@@ -340,6 +349,7 @@ double  StepSize[PROBLEM_DIM];
 }
 
 
+
 //-------------------------------------------------------------------------------------------------------------
 //
 //  This function performs torroidal saturation of the vector using the bounds array
@@ -430,13 +440,13 @@ bool Search::randChoice()
     return false;
 }
 
-#define MAX_PARTICLES 10000
-#define ANGLE_MIN -1
-#define ANGLE_MAX 1
-#define X_CENTER_MIN 934
-#define X_CENTER_MAX 984
-#define Y_CENTER_MIN 514
-#define Y_CENTER_MAX 563
+#define MAX_PARTICLES 100000
+#define ANGLE_MIN -1.0
+#define ANGLE_MAX 1.0
+#define X_CENTER_MIN 950
+#define X_CENTER_MAX 969
+#define Y_CENTER_MIN 530
+#define Y_CENTER_MAX 549
 
 #define K0_MIN -0.2
 #define K0_MAX 0.2
@@ -444,7 +454,7 @@ bool Search::randChoice()
 #define K1_MAX 0.2
 #define K2_MIN -0.2
 #define K2_MAX 0.2
-#define QTY_SELECTED_PARICLES 200
+#define QTY_SELECTED_PARICLES 2000
 #define RANDOMNESS 10
 #define K_RANDOMNESS 20
 
@@ -494,6 +504,11 @@ QVector <PARTICLE> SelectedParticles;
 
         // Perform Mutation of selected particles
         LRSearchMutate(SelectedParticles);
+
+        for(int i=0;i<QTY_SELECTED_PARICLES;i++)
+            PS.particle.push_back(SelectedParticles.at(i));
+
+
         LRSearchAddParticles(250);
     }
     StatisticalData.push_back(SearchStatus.BestError);
@@ -782,3 +797,165 @@ PSO_PARTICLE Search::PSOPerturb(PSO_PARTICLE P)
 
 }
 
+
+#define EV_PARTICLES 5000
+#define EV_ALPHA 0.2
+#define EV_DELTA 0.005
+
+void Search::EV_Search(int maxEvaluations)
+{
+    EV_Init();
+
+    double BestError;
+    double LastBestError=0;
+    int SameValueCount=0;
+
+    for(int i=0;i<maxEvaluations;i++)
+    {
+    EV_Evolve();
+    EV_SortAndSelect();
+    qDebug() << "Best Error :" << EV_Swarm.front().Error;
+    BestError = EV_Swarm.front().Error;
+    EV_Function(EV_Swarm.front());
+
+
+
+    SearchStatus.BestError = BestError;
+
+    //SearchStatus.BestParticle.push_back(PS.particle[0]);
+    SearchStatus.qsSearchStatus = "LRSearch Number: " + QString::number(i) + "    Error: " + QString::number(SearchStatus.BestError,'f',1);
+
+    emit updateStatus();
+    QThread::msleep(500);
+
+    if(LastBestError == BestError)
+        SameValueCount++;
+
+    LastBestError = BestError;
+
+    if(SameValueCount==5)
+        break;
+
+    }
+    PARTICLE PV;
+    PV.Angle = EV_Swarm.front().Angle;
+    PV.BestError=BestError;
+    PV.Center = EV_Swarm.front().Center;
+    PV.K[0] = EV_Swarm.front().K[0];
+    PV.K[1] = EV_Swarm.front().K[1];
+    PV.K[2] = EV_Swarm.front().K[2];
+    SearchStatus.BestParticle.push_back(PV);
+
+    StatisticalData.push_back(BestError);
+
+
+}
+
+void Search::EV_Init()
+{
+    QDateTime cd = QDateTime::currentDateTime();
+    qsrand(cd.toTime_t());
+
+    pso.BestError = std::numeric_limits<double>::max();
+    pso.theta1 = drand(T1_MIN,T1_MAX);
+
+    EV_Swarm.clear();
+    for(int i=0;i<EV_PARTICLES;i++)
+    {
+        EV_PARTICLE P;
+        P.Angle = drand(ANGLE_MIN,ANGLE_MAX);
+        int X = (int)drand(X_CENTER_MIN,X_CENTER_MAX);
+        int Y = (int)drand(Y_CENTER_MIN,Y_CENTER_MAX);
+        P.Center.setX(X);
+        P.Center.setY(Y);
+        P.K[0] = drand(K0_MIN,K0_MAX);
+        P.K[1] = drand(K1_MIN,K1_MAX);
+        P.K[2] = drand(K2_MIN,K2_MAX);
+        P.Error = std::numeric_limits<double>::max();
+        for(int m=0;m<6;m++)
+            P.movement[m]= drand(0,1);
+
+        EV_Swarm.push_back(P);
+    }
+
+    qDebug() << "EV Init Done....";
+}
+
+double Search::EV_Function(EV_PARTICLE Particle)
+{
+    DV.Angle   = Particle.Angle;
+    DV.K[0]   = Particle.K[0];
+    DV.K[1]   = Particle.K[1];
+    DV.K[2]   = Particle.K[2];
+    DV.Center = Particle.Center;
+
+    double Error = LDC.getLDCError(DV);
+
+    return Error;
+}
+
+void Search::EV_Evolve()
+{
+
+        for(int p=0;p<EV_PARTICLES;p++)
+        {
+        EV_PARTICLE P = EV_Swarm.at(p);
+        EV_PARTICLE newP;
+        double r,r1;
+        for(int i=0;i<6;i++){
+            r1 = drand(0,1);
+            newP.movement[i] = P.movement[i]*(1+(EV_ALPHA*r1));
+//            if(newP.movement[i] > 0.5) newP.movement[i]=0.5;
+//            if(newP.movement[i] < 0.1) newP.movement[i]=0.1;
+
+            int X,newX,Y,newY;
+            switch(i){
+                case 0 : r= drand(0,EV_DELTA);
+                         newP.K[0] = P.K[0] + (newP.movement[0]*r);
+                         break;
+                case 1 : newP.K[1] = P.K[1] + (newP.movement[1]*drand(0,EV_DELTA));
+                         break;
+                case 2 : newP.K[2] = P.K[2] + (newP.movement[2]*drand(0,EV_DELTA/10));
+                         break;
+                case 3 : newP.Angle = P.Angle + (newP.movement[3]*drand(0,EV_DELTA/10));
+                         break;
+                case 4 : X = P.Center.x();
+                         newX = X + (newP.movement[4]*drand(0,EV_DELTA));
+                         newP.Center.setX(newX);
+                         break;
+                case 5 : Y = P.Center.y();
+                         newY = Y + (newP.movement[5]*drand(0,EV_DELTA));
+                         newP.Center.setY(newY);
+                         break;
+                default : qDebug() << "EV_Evolve: ERROR Should never have got here";
+                }
+            }
+        EV_Swarm.push_back(newP);
+
+        if(p==0){
+        qDebug() << "----------------------------------------------------------------------------------";
+        qDebug() << "oP.K[0]="<< P.K[0]<<" oP.K[0]="<< P.K[2]<<" oP.K[0]="<< P.K[2];
+        qDebug() << "nP.K[0]="<< newP.K[0]<<" nP.K[0]="<< newP.K[2]<<" nP.K[0]="<< newP.K[2];
+        qDebug() << "pM[0]="<<P.movement[0]<< " pM[1]="<<P.movement[1]<< " pM[2]="<<P.movement[2];
+        qDebug() << "nM[0]="<<newP.movement[0]<< " nM[1]="<<newP.movement[1]<< " nM[2]="<<newP.movement[2];
+        }
+
+        }
+
+        qDebug() << "EV_Evolve done ...";
+}
+
+void Search::EV_SortAndSelect()
+{
+    for(int i=0;i<EV_Swarm.size();i++)
+    {
+        EV_PARTICLE P = EV_Swarm.at(i);
+        EV_Swarm[i].Error = EV_Function(P);
+    }
+
+    qSort(EV_Swarm);
+    EV_Swarm.remove(EV_PARTICLES,EV_PARTICLES);
+
+    qDebug() << "Sort and Select Done ...";
+
+}

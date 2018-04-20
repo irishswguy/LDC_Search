@@ -37,6 +37,18 @@ struct PSO_PARTICLE
     }
 };
 
+struct EV_PARTICLE
+{
+    double K[3];
+    double Angle;
+    QPoint Center;
+    double movement[6];
+    double Error;
+    bool operator<(const EV_PARTICLE &other) const {
+      return (Error < other.Error);
+    }
+};
+
 struct PSO_GLOBAL
 {
     QVector <PSO_PARTICLE> P;
@@ -98,6 +110,15 @@ public:
 
     void S(double bounds[PROBLEM_DIM],int maxEvaluations);
     void S_New(QVector <double>,int maxEvaluations);
+
+    //------------------ Evolution Search ------------------------------
+    QVector <EV_PARTICLE> EV_Swarm;
+    void EV_Search(int maxEvaluations);
+    void EV_Init();
+    double EV_Function(EV_PARTICLE);
+    void EV_Evolve(void);
+    void EV_SortAndSelect(void);
+
 
     // --------------------------------------------------------------------
     struct PSO_GLOBAL pso;
