@@ -68,10 +68,12 @@ QPoint Distortion::getUndistortedPoint(QPoint p,DISTORTION_VARS DV)
     double temp = 0;
     double r2 = normalized_radius * normalized_radius;
 
-    temp = 1 + (DV.K[0] * r2) + (DV.K[1] * r2 *r2) + (DV.K[2] *r2*r2*r2*r2)+(DV.K[3] *r2*r2*r2*r2*r2*r2*r2*r2);
+    if(SET_K_ZERO==false)
+        temp = 1 + (DV.K[0] * r2) + (DV.K[1] * r2 *r2) + (DV.K[2] *r2*r2*r2*r2)+(DV.K[3] *r2*r2*r2*r2*r2*r2*r2*r2);
     //temp = 1 + (DV.K[0] * r2) + (DV.K[1] * r2 *r2);
     //temp = 1 + (DV.K[0] * r2);
-    //temp = 1;
+    else
+        temp = 1;
     x_corrected = CentrePoint.x() + ( (p.x() - CentrePoint.x()) * temp);
     y_corrected = CentrePoint.y() + ( (p.y() - CentrePoint.y()) * temp);
 

@@ -32,6 +32,7 @@ public:
     //struct DISTORTION_VARS DV;
 
     bool ExtraK = false;
+    bool SET_K_ZERO=false;
 
 
 

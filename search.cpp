@@ -211,6 +211,8 @@ int     j = 0;
 double  StepSize[PROBLEM_DIM];
 
 
+        LDC.SET_K_ZERO=true;
+
         QDateTime cd = QDateTime::currentDateTime();
         qsrand(cd.toTime_t());
 
@@ -440,7 +442,7 @@ bool Search::randChoice()
     return false;
 }
 
-#define MAX_PARTICLES 100000
+#define MAX_PARTICLES 1000
 #define ANGLE_MIN -1.0
 #define ANGLE_MAX 1.0
 #define X_CENTER_MIN 950
@@ -454,7 +456,7 @@ bool Search::randChoice()
 #define K1_MAX 0.2
 #define K2_MIN -0.2
 #define K2_MAX 0.2
-#define QTY_SELECTED_PARICLES 2000
+#define QTY_SELECTED_PARICLES 200
 #define RANDOMNESS 10
 #define K_RANDOMNESS 20
 
